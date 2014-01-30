@@ -1,6 +1,6 @@
 --*-lua-*--
 package = "lua-parser"
-version = "0.1"
+version = "0.1-1"
 source = {
    url = "https://github.com/andremm/lua-parser",
    tag = "v0.1",
@@ -17,8 +17,8 @@ description = {
    license = "MIT"
 }
 dependencies = {
-   "lua ~> 5.2",
-   " lpeg >= 0.12",
+   "lua >= 5.1",
+   "lpeg >= 0.12",
 }
 build = {
     type="builtin",

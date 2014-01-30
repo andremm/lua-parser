@@ -8,9 +8,9 @@ local parser
 if metalua then
   parser = require "metalua.compiler".new()
 else
-  parser = require "new.parser"
+  parser = require "lua-parser.parser"
 end
-local pp = require "new.pp"
+local pp = require "lua-parser.pp"
 
 -- expected result, result, subject
 local e, r, s
