@@ -1,7 +1,16 @@
 #!/usr/bin/env lua
 
-local ast = require "lua-parser.ast"
-local parser = require "lua-parser.parser"
+local metalua = false
+
+if arg[1] == "metalua" then metalua = true end
+
+local parser
+if metalua then
+  parser = require "metalua.compiler".new()
+else
+  parser = require "new.parser"
+end
+local pp = require "new.pp"
 
 -- expected result, result, subject
 local e, r, s
@@ -9,12 +18,17 @@ local e, r, s
 local filename = "test.lua"
 
 local function parse (s)
-  local t,m = parser.parse(s,filename)
+  local t,m
+  if metalua then
+    t = parser:src_to_ast(s)
+  else
+    t,m = parser.parse(s,filename)
+  end
   local r
   if not t then
     r = m
   else
-    r = ast.tostring(t)
+    r = pp.tostring(t)
   end
   return r .. "\n"
 end
@@ -28,7 +42,7 @@ print("> testing lexer...")
 s = [=[
 ]=]
 e = [=[
-StmBlock []
+{  }
 ]=]
 
 r = parse(s)
@@ -38,7 +52,7 @@ s = [=[
 -- testing empty file
 ]=]
 e = [=[
-StmBlock []
+{  }
 ]=]
 
 r = parse(s)
@@ -50,7 +64,7 @@ s = [=[
 _nil,_false,_true,_dots = nil,false,true,...
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "_nil",VarID "_false",VarID "_true",VarID "_dots"] [ExpNil,ExpFalse,ExpTrue,ExpDots]]
+{ `Set{ { `Id "_nil", `Id "_false", `Id "_true", `Id "_dots" }, { `Nil, `False, `True, `Dots } } }
 ]=]
 
 r = parse(s)
@@ -63,7 +77,7 @@ f1 = 1.
 f2 = 1.1
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "f1"] [ExpNum 1.0],StmAssign [VarID "f2"] [ExpNum 1.1]]
+{ `Set{ { `Id "f1" }, { `Number "1" } }, `Set{ { `Id "f2" }, { `Number "1.1" } } }
 ]=]
 
 r = parse(s)
@@ -74,7 +88,7 @@ f1 = 1.e-1
 f2 = 1.e1
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "f1"] [ExpNum 0.1],StmAssign [VarID "f2"] [ExpNum 10.0]]
+{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "10" } } }
 ]=]
 
 r = parse(s)
@@ -85,7 +99,7 @@ f1 = 1.1e+1
 f2 = 1.1e1
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "f1"] [ExpNum 11.0],StmAssign [VarID "f2"] [ExpNum 11.0]]
+{ `Set{ { `Id "f1" }, { `Number "11" } }, `Set{ { `Id "f2" }, { `Number "11" } } }
 ]=]
 
 r = parse(s)
@@ -96,7 +110,7 @@ f1 = .1
 f2 = .1e1
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "f1"] [ExpNum 0.1],StmAssign [VarID "f2"] [ExpNum 1.0]]
+{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "1" } } }
 ]=]
 
 r = parse(s)
@@ -107,7 +121,7 @@ f1 = 1E1
 f2 = 1e-1
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "f1"] [ExpNum 10.0],StmAssign [VarID "f2"] [ExpNum 0.1]]
+{ `Set{ { `Id "f1" }, { `Number "10" } }, `Set{ { `Id "f2" }, { `Number "0.1" } } }
 ]=]
 
 r = parse(s)
@@ -120,7 +134,7 @@ i = 1
 h = 0xff
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "i"] [ExpNum 1.0],StmAssign [VarID "h"] [ExpNum 255.0]]
+{ `Set{ { `Id "i" }, { `Number "1" } }, `Set{ { `Id "h" }, { `Number "255" } } }
 ]=]
 
 r = parse(s)
@@ -131,7 +145,7 @@ h = 0x76c
 i = 4294967296 -- 2^32
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "h"] [ExpNum 1900.0],StmAssign [VarID "i"] [ExpNum 4294967296.0]]
+{ `Set{ { `Id "h" }, { `Number "1900" } }, `Set{ { `Id "i" }, { `Number "4294967296" } } }
 ]=]
 
 r = parse(s)
@@ -151,7 +165,7 @@ bye
 ]======]
 ]=]
 e = [=[
-StmBlock []
+{  }
 ]=]
 
 r = parse(s)
@@ -174,7 +188,7 @@ testing long string1 end
 ]]
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ls1"] [ExpStr "testing long string\n"]]
+{ `Set{ { `Id "ls1" }, { `String "testing long string\n" } } }
 ]=]
 
 r = parse(s)
@@ -193,7 +207,7 @@ ls2 = [==[ testing \n [[ long ]] \t [===[ string ]===]
 ]==]
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ls2"] [ExpStr " testing \\n [[ long ]] \\t [===[ string ]===]\n\\a "]]
+{ `Set{ { `Id "ls2" }, { `String " testing \\n [[ long ]] \\t [===[ string ]===]\n\\a " } } }
 ]=]
 
 r = parse(s)
@@ -210,7 +224,7 @@ ss1_b = 'ola mundo\a'
 -- short string test end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ss1_a"] [ExpStr "ola mundo\a"],StmAssign [VarID "ss1_b"] [ExpStr "ola mundo\a"]]
+{ `Set{ { `Id "ss1_a" }, { `String "ola mundo\a" } }, `Set{ { `Id "ss1_b" }, { `String "ola mundo\a" } } }
 ]=]
 
 r = parse(s)
@@ -225,7 +239,7 @@ ss2_b = 'testando,\tteste\n1\n2\n3 --> \'tchau\''
 -- short string test end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ss2_a"] [ExpStr "testando,\tteste\n1\n2\n3 --> \"tchau\""],StmAssign [VarID "ss2_b"] [ExpStr "testando,\tteste\n1\n2\n3 --> 'tchau'"]]
+{ `Set{ { `Id "ss2_a" }, { `String "testando,\tteste\n1\n2\n3 --> \"tchau\"" } }, `Set{ { `Id "ss2_b" }, { `String "testando,\tteste\n1\n2\n3 --> 'tchau'" } } }
 ]=]
 
 r = parse(s)
@@ -243,7 +257,7 @@ ss3_b = 'ola \
 -- short string test end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ss3_a"] [ExpStr "ola \n'mundo'!"],StmAssign [VarID "ss3_b"] [ExpStr "ola \n\"mundo\"!"]]
+{ `Set{ { `Id "ss3_a" }, { `String "ola \n'mundo'!" } }, `Set{ { `Id "ss3_b" }, { `String "ola \n\"mundo\"!" } } }
 ]=]
 
 r = parse(s)
@@ -259,7 +273,7 @@ ss4_b = 'C:\\Temp/'
 -- short string test end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ss4_a"] [ExpStr "C:\\Temp/"],StmAssign [VarID "ss4_b"] [ExpStr "C:\\Temp/"]]
+{ `Set{ { `Id "ss4_a" }, { `String "C:\\Temp/" } }, `Set{ { `Id "ss4_b" }, { `String "C:\\Temp/" } } }
 ]=]
 
 r = parse(s)
@@ -279,13 +293,15 @@ cruel'
 -- short string test end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "ss5_a"] [ExpStr "ola \nmundo \\ \ncruel"],StmAssign [VarID "ss5_b"] [ExpStr "ola \nmundo \\ \ncruel"]]
+{ `Set{ { `Id "ss5_a" }, { `String "ola \nmundo \\ \ncruel" } }, `Set{ { `Id "ss5_b" }, { `String "ola \nmundo \\ \ncruel" } } }
 ]=]
 
 r = parse(s)
 assert(r == e)
 
 -- syntax error
+
+if not metalua then
 
 -- floating points
 
@@ -395,7 +411,7 @@ string'
 e = [=[
 ]=]
 
---r = parse(s)
+r = parse(s)
 --assert(r == e)
 
 -- unfinished comments
@@ -412,6 +428,8 @@ test.lua:3:1: syntax error, unexpected 'comment', expecting '=', ',', 'String', 
 r = parse(s)
 assert(r == e)
 
+end
+
 print("> testing parser...")
 
 -- syntax ok
@@ -422,7 +440,7 @@ s = [=[
 local a,b,c = function () end
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["a","b","c"] [ExpFunction ([],False) (StmBlock [])]]
+{ `Local{ { `Id "a", `Id "b", `Id "c" }, { `Function{ {  }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -432,7 +450,7 @@ s = [=[
 local test = function ( a , b , ... ) end
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["test"] [ExpFunction (["a","b"],True) (StmBlock [])]]
+{ `Local{ { `Id "test" }, { `Function{ { `Id "a", `Id "b", `Dots }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -442,7 +460,7 @@ s = [=[
 test = function (...) return ...,0 end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "test"] [ExpFunction ([],True) (StmBlock [StmRet [ExpDots,ExpNum 0.0]])]]
+{ `Set{ { `Id "test" }, { `Function{ { `Dots }, { `Return{ `Dots, `Number "0" } } } } } }
 ]=]
 
 r = parse(s)
@@ -454,7 +472,7 @@ s = [=[
 arithmetic = 1 - 2 * 3 + 4
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "arithmetic"] [ExpAdd (ExpSub (ExpNum 1.0) (ExpMul (ExpNum 2.0) (ExpNum 3.0))) (ExpNum 4.0)]]
+{ `Set{ { `Id "arithmetic" }, { `Op{ "add", `Op{ "sub", `Number "1", `Op{ "mul", `Number "2", `Number "3" } }, `Number "4" } } } }
 ]=]
 
 r = parse(s)
@@ -464,7 +482,7 @@ s = [=[
 pow = -3^-2^2
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "pow"] [ExpMinus (ExpPow (ExpNum 3.0) (ExpMinus (ExpPow (ExpNum 2.0) (ExpNum 2.0))))]]
+{ `Set{ { `Id "pow" }, { `Op{ "unm", `Op{ "pow", `Number "3", `Op{ "unm", `Op{ "pow", `Number "2", `Number "2" } } } } } } }
 ]=]
 
 r = parse(s)
@@ -476,7 +494,7 @@ s = [=[
 a = f()[1]
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "a"] [ExpVar (VarIndex (ExpFunctionCall (ExpVar (VarID "f")) []) (ExpNum 1.0))]]
+{ `Set{ { `Id "a" }, { `Index{ `Call{ `Id "f" }, `Number "1" } } } }
 ]=]
 
 r = parse(s)
@@ -486,7 +504,7 @@ s = [=[
 a()[1] = 1;
 ]=]
 e = [=[
-StmBlock [StmAssign [VarIndex (ExpFunctionCall (ExpVar (VarID "a")) []) (ExpNum 1.0)] [ExpNum 1.0]]
+{ `Set{ { `Index{ `Call{ `Id "a" }, `Number "1" } }, { `Number "1" } } }
 ]=]
 
 r = parse(s)
@@ -496,7 +514,7 @@ s = [=[
 i = a.f(1)
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "i"] [ExpFunctionCall (ExpVar (VarIndex (ExpVar (VarID "a")) (ExpStr "f"))) [ExpNum 1.0]]]
+{ `Set{ { `Id "i" }, { `Call{ `Index{ `Id "a", `String "f" }, `Number "1" } } } }
 ]=]
 
 r = parse(s)
@@ -506,7 +524,7 @@ s = [=[
 i = a[f(1)]
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "i"] [ExpVar (VarIndex (ExpVar (VarID "a")) (ExpFunctionCall (ExpVar (VarID "f")) [ExpNum 1.0]))]]
+{ `Set{ { `Id "i" }, { `Index{ `Id "a", `Call{ `Id "f", `Number "1" } } } } }
 ]=]
 
 r = parse(s)
@@ -517,7 +535,7 @@ a[f()] = sub
 i = i + 1
 ]=]
 e = [=[
-StmBlock [StmAssign [VarIndex (ExpVar (VarID "a")) (ExpFunctionCall (ExpVar (VarID "f")) [])] [ExpVar (VarID "sub")],StmAssign [VarID "i"] [ExpAdd (ExpVar (VarID "i")) (ExpNum 1.0)]]
+{ `Set{ { `Index{ `Id "a", `Call{ `Id "f" } } }, { `Id "sub" } }, `Set{ { `Id "i" }, { `Op{ "add", `Id "i", `Number "1" } } } }
 ]=]
 
 r = parse(s)
@@ -527,7 +545,7 @@ s = [=[
 a:b(1)._ = some_value
 ]=]
 e = [=[
-StmBlock [StmAssign [VarIndex (ExpMethodCall (ExpVar (VarIndex (ExpVar (VarID "a")) (ExpStr "b"))) [ExpNum 1.0]) (ExpStr "_")] [ExpVar (VarID "some_value")]]
+{ `Set{ { `Index{ `Invoke{ `Id "a", `String "b", `Number "1" }, `String "_" } }, { `Id "some_value" } } }
 ]=]
 
 r = parse(s)
@@ -541,7 +559,7 @@ while 1 do
 end
 ]=]
 e = [=[
-StmBlock [StmWhile (ExpNum 1.0) (StmBlock [StmBreak])]
+{ `While{ `Number "1", { `Break } } }
 ]=]
 
 r = parse(s)
@@ -556,7 +574,7 @@ while 1 do
 end
 ]=]
 e = [=[
-StmBlock [StmWhile (ExpNum 1.0) (StmBlock [StmWhile (ExpNum 1.0) (StmBlock [StmBreak]),StmBreak])]
+{ `While{ `Number "1", { `While{ `Number "1", { `Break } }, `Break } } }
 ]=]
 
 r = parse(s)
@@ -568,7 +586,7 @@ repeat
 until 1
 ]=]
 e = [=[
-StmBlock [StmRepeat (StmBlock [StmIfElse (ExpGT (ExpNum 2.0) (ExpNum 1.0)) (StmBlock [StmBreak]) (StmBlock [])]) (ExpNum 1.0)]
+{ `Repeat{ { `If{ `Op{ "lt", `Number "1", `Number "2" }, { `Break } } }, `Number "1" } }
 ]=]
 
 r = parse(s)
@@ -584,7 +602,7 @@ for i=1,10 do
 end
 ]=]
 e = [=[
-StmBlock [StmForNum "i" (ExpNum 1.0) (ExpNum 10.0) (ExpNum 1.0) (StmBlock [StmBlock [StmBreak,StmBreak,StmRet []]])]
+{ `Fornum{ `Id "i", `Number "1", `Number "10", { `Do{ `Break, `Break, `Return } } } }
 ]=]
 
 r = parse(s)
@@ -599,7 +617,7 @@ do
 end
 ]=]
 e = [=[
-StmBlock [StmBlock [StmAssign [VarID "var"] [ExpAdd (ExpNum 2.0) (ExpNum 2.0)],StmRet []]]
+{ `Do{ `Set{ { `Id "var" }, { `Op{ "add", `Number "2", `Number "2" } } }, `Return } }
 ]=]
 
 r = parse(s)
@@ -611,7 +629,7 @@ s = [=[
 concat1 = 1 .. 2^3
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "concat1"] [ExpConcat (ExpNum 1.0) (ExpPow (ExpNum 2.0) (ExpNum 3.0))]]
+{ `Set{ { `Id "concat1" }, { `Op{ "concat", `Number "1", `Op{ "pow", `Number "2", `Number "3" } } } } }
 ]=]
 
 r = parse(s)
@@ -619,12 +637,16 @@ assert(r == e)
 
 -- empty files
 
+if not metalua then
+
 s = [=[
 ;
 ]=]
 e = [=[
-StmBlock []
+{  }
 ]=]
+
+end
 
 r = parse(s)
 assert(r == e)
@@ -635,8 +657,11 @@ s = [=[
 for k,v in pairs(t) do print (k,v) end
 ]=]
 e = [=[
-StmBlock [StmForGen ["k","v"] [ExpFunctionCall (ExpVar (VarID "pairs")) [ExpVar (VarID "t")]] (StmBlock [StmCall (ExpFunctionCall (ExpVar (VarID "print")) [ExpVar (VarID "k"),ExpVar (VarID "v")])])]
+{ `Forin{ { `Id "k", `Id "v" }, { `Call{ `Id "pairs", `Id "t" } }, { `Call{ `Id "print", `Id "k", `Id "v" } } } }
 ]=]
+
+r = parse(s)
+assert(r == e)
 
 -- for numeric
 
@@ -644,7 +669,7 @@ s = [=[
 for i = 1 , 10 , 2 do end
 ]=]
 e = [=[
-StmBlock [StmForNum "i" (ExpNum 1.0) (ExpNum 10.0) (ExpNum 2.0) (StmBlock [])]
+{ `Fornum{ `Id "i", `Number "1", `Number "10", `Number "2", {  } } }
 ]=]
 
 r = parse(s)
@@ -654,7 +679,7 @@ s = [=[
 for i=1,10 do end
 ]=]
 e = [=[
-StmBlock [StmForNum "i" (ExpNum 1.0) (ExpNum 10.0) (ExpNum 1.0) (StmBlock [])]
+{ `Fornum{ `Id "i", `Number "1", `Number "10", {  } } }
 ]=]
 
 r = parse(s)
@@ -666,7 +691,7 @@ s = [=[
 function test(a , b , ...) end
 ]=]
 e = [=[
-StmBlock [StmFunction (Function ["test"]) (["a","b"],True) (StmBlock [])]
+{ `Set{ { `Id "test" }, { `Function{ { `Id "a", `Id "b", `Dots }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -676,7 +701,7 @@ s = [=[
 function test (...) end
 ]=]
 e = [=[
-StmBlock [StmFunction (Function ["test"]) ([],True) (StmBlock [])]
+{ `Set{ { `Id "test" }, { `Function{ { `Dots }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -686,7 +711,7 @@ s = [=[
 function t.a:b() end
 ]=]
 e = [=[
-StmBlock [StmFunction (Method ["t","a","b"]) ([],False) (StmBlock [])]
+{ `Set{ { `Index{ `Index{ `Id "t", `String "a" }, `String "b" } }, { `Function{ { `Id "self" }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -696,7 +721,7 @@ s = [=[
 function t.a() end
 ]=]
 e = [=[
-StmBlock [StmFunction (Function ["t","a"]) ([],False) (StmBlock [])]
+{ `Set{ { `Index{ `Id "t", `String "a" } }, { `Function{ {  }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -706,7 +731,7 @@ s = [=[
 function testando . funcao . com : espcacos ( e, com , parametros, ... ) end
 ]=]
 e = [=[
-StmBlock [StmFunction (Method ["testando","funcao","com","espcacos"]) (["e","com","parametros"],True) (StmBlock [])]
+{ `Set{ { `Index{ `Index{ `Index{ `Id "testando", `String "funcao" }, `String "com" }, `String "espcacos" } }, { `Function{ { `Id "self", `Id "e", `Id "com", `Id "parametros", `Dots }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -714,12 +739,14 @@ assert(r == e)
 
 -- goto
 
+if not metalua then
+
 s = [=[
 goto label
 :: label :: return
 ]=]
 e = [=[
-StmBlock [StmGoTo "label",StmLabel "label",StmRet []]
+{ `Goto{ "label" }, `Label{ "label" }, `Return }
 ]=]
 
 r = parse(s)
@@ -730,7 +757,7 @@ s = [=[
 goto label
 ]=]
 e = [=[
-StmBlock [StmLabel "label",StmGoTo "label"]
+{ `Label{ "label" }, `Goto{ "label" } }
 ]=]
 
 r = parse(s)
@@ -741,7 +768,7 @@ goto label
 ::label::
 ]=]
 e = [=[
-StmBlock [StmGoTo "label",StmLabel "label"]
+{ `Goto{ "label" }, `Label{ "label" } }
 ]=]
 
 r = parse(s)
@@ -752,7 +779,7 @@ s = [=[
 do ::label:: goto label end
 ]=]
 e = [=[
-StmBlock [StmLabel "label",StmBlock [StmLabel "label",StmGoTo "label"]]
+{ `Label{ "label" }, `Do{ `Label{ "label" }, `Goto{ "label" } } }
 ]=]
 
 r = parse(s)
@@ -763,7 +790,7 @@ s = [=[
 do goto label ; ::label:: end
 ]=]
 e = [=[
-StmBlock [StmLabel "label",StmBlock [StmGoTo "label",StmLabel "label"]]
+{ `Label{ "label" }, `Do{ `Goto{ "label" }, `Label{ "label" } } }
 ]=]
 
 r = parse(s)
@@ -774,7 +801,7 @@ s = [=[
 do goto label end
 ]=]
 e = [=[
-StmBlock [StmLabel "label",StmBlock [StmGoTo "label"]]
+{ `Label{ "label" }, `Do{ `Goto{ "label" } } }
 ]=]
 
 r = parse(s)
@@ -785,7 +812,7 @@ do goto label end
 ::label::
 ]=]
 e = [=[
-StmBlock [StmBlock [StmGoTo "label"],StmLabel "label"]
+{ `Do{ `Goto{ "label" } }, `Label{ "label" } }
 ]=]
 
 r = parse(s)
@@ -796,11 +823,13 @@ do do do do do goto label end end end end end
 ::label::
 ]=]
 e = [=[
-StmBlock [StmBlock [StmBlock [StmBlock [StmBlock [StmBlock [StmGoTo "label"]]]]],StmLabel "label"]
+{ `Do{ `Do{ `Do{ `Do{ `Do{ `Goto{ "label" } } } } } }, `Label{ "label" } }
 ]=]
 
 r = parse(s)
 assert(r == e)
+
+end
 
 -- if-else
 
@@ -808,7 +837,7 @@ s = [=[
 if a then end
 ]=]
 e = [=[
-StmBlock [StmIfElse (ExpVar (VarID "a")) (StmBlock []) (StmBlock [])]
+{ `If{ `Id "a", {  } } }
 ]=]
 
 r = parse(s)
@@ -818,7 +847,7 @@ s = [=[
 if a then return a else return end
 ]=]
 e = [=[
-StmBlock [StmIfElse (ExpVar (VarID "a")) (StmBlock [StmRet [ExpVar (VarID "a")]]) (StmBlock [StmRet []])]
+{ `If{ `Id "a", { `Return{ `Id "a" } }, { `Return } } }
 ]=]
 
 r = parse(s)
@@ -834,7 +863,7 @@ else
 end
 ]=]
 e = [=[
-StmBlock [StmIfElse (ExpVar (VarID "a")) (StmBlock [StmRet [ExpVar (VarID "a")]]) (StmBlock [StmLocalVar ["c"] [ExpVar (VarID "d")],StmAssign [VarID "d"] [ExpAdd (ExpVar (VarID "d")) (ExpNum 1.0)],StmRet [ExpVar (VarID "d")]])]
+{ `If{ `Id "a", { `Return{ `Id "a" } }, { `Local{ { `Id "c" }, { `Id "d" } }, `Set{ { `Id "d" }, { `Op{ "add", `Id "d", `Number "1" } } }, `Return{ `Id "d" } } } }
 ]=]
 
 r = parse(s)
@@ -850,11 +879,13 @@ elseif c then
 end
 ]=]
 e = [=[
-StmBlock [StmIfElse (ExpVar (VarID "a")) (StmBlock [StmRet [ExpVar (VarID "a")]]) (StmIfElse (ExpVar (VarID "b")) (StmBlock [StmRet [ExpVar (VarID "b")]]) (StmIfElse (ExpVar (VarID "c")) (StmBlock [StmRet [ExpVar (VarID "c")]]) (StmBlock [])))]
+{ `If{ `Id "a", { `Return{ `Id "a" } }, `Id "b", { `Return{ `Id "b" } }, `Id "c", { `Return{ `Id "c" } } } }
 ]=]
 
 r = parse(s)
 assert(r == e)
+
+if not metalua then
 
 s = [=[
 if a then return a
@@ -863,11 +894,13 @@ else ;
 end
 ]=]
 e = [=[
-StmBlock [StmIfElse (ExpVar (VarID "a")) (StmBlock [StmRet [ExpVar (VarID "a")]]) (StmIfElse (ExpVar (VarID "b")) (StmBlock [StmRet []]) (StmBlock []))]
+{ `If{ `Id "a", { `Return{ `Id "a" } }, `Id "b", { `Return }, {  } } }
 ]=]
 
 r = parse(s)
 assert(r == e)
+
+end
 
 s = [=[
 if a then
@@ -876,7 +909,7 @@ elseif c then
 end
 ]=]
 e = [=[
-StmBlock [StmIfElse (ExpVar (VarID "a")) (StmBlock [StmRet []]) (StmIfElse (ExpVar (VarID "c")) (StmBlock []) (StmBlock []))]
+{ `If{ `Id "a", { `Return }, `Id "c", {  } } }
 ]=]
 
 r = parse(s)
@@ -884,17 +917,21 @@ assert(r == e)
 
 -- labels
 
+if not metalua then
+
 s = [=[
 ::label::
 do ::label:: end
 ::other_label::
 ]=]
 e = [=[
-StmBlock [StmLabel "label",StmBlock [StmLabel "label"],StmLabel "other_label"]
+{ `Label{ "label" }, `Do{ `Label{ "label" } }, `Label{ "other_label" } }
 ]=]
 
 r = parse(s)
 assert(r == e)
+
+end
 
 -- locals
 
@@ -902,7 +939,7 @@ s = [=[
 local a
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["a"] []]
+{ `Local{ { `Id "a" }, {  } } }
 ]=]
 
 r = parse(s)
@@ -912,7 +949,7 @@ s = [=[
 local a,b,c
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["a","b","c"] []]
+{ `Local{ { `Id "a", `Id "b", `Id "c" }, {  } } }
 ]=]
 
 r = parse(s)
@@ -922,7 +959,7 @@ s = [=[
 local a = 1 , 1 + 2, 5.1
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["a"] [ExpNum 1.0,ExpAdd (ExpNum 1.0) (ExpNum 2.0),ExpNum 5.1]]
+{ `Local{ { `Id "a" }, { `Number "1", `Op{ "add", `Number "1", `Number "2" }, `Number "5.1" } } }
 ]=]
 
 r = parse(s)
@@ -932,7 +969,7 @@ s = [=[
 local a,b,c = 1.9
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["a","b","c"] [ExpNum 1.9]]
+{ `Local{ { `Id "a", `Id "b", `Id "c" }, { `Number "1.9" } } }
 ]=]
 
 r = parse(s)
@@ -942,7 +979,7 @@ s = [=[
 local function test() end
 ]=]
 e = [=[
-StmBlock [StmLocalFunction "test" ([],False) (StmBlock [])]
+{ `Localrec{ { `Id "test" }, { `Function{ {  }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -952,7 +989,7 @@ s = [=[
 local function test ( a , b , c , ... ) end
 ]=]
 e = [=[
-StmBlock [StmLocalFunction "test" (["a","b","c"],True) (StmBlock [])]
+{ `Localrec{ { `Id "test" }, { `Function{ { `Id "a", `Id "b", `Id "c", `Dots }, {  } } } } }
 ]=]
 
 r = parse(s)
@@ -962,7 +999,7 @@ s = [=[
 local function test(...) return ... end
 ]=]
 e = [=[
-StmBlock [StmLocalFunction "test" ([],True) (StmBlock [StmRet [ExpDots]])]
+{ `Localrec{ { `Id "test" }, { `Function{ { `Dots }, { `Return{ `Dots } } } } } }
 ]=]
 
 r = parse(s)
@@ -974,7 +1011,7 @@ s = [=[
 relational = 1 < 2 >= 3 == 4 ~= 5 < 6 <= 7
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "relational"] [ExpLE (ExpLT (ExpNE (ExpEQ (ExpGE (ExpLT (ExpNum 1.0) (ExpNum 2.0)) (ExpNum 3.0)) (ExpNum 4.0)) (ExpNum 5.0)) (ExpNum 6.0)) (ExpNum 7.0)]]
+{ `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "not", `Op{ "eq", `Op{ "eq", `Op{ "le", `Number "3", `Op{ "lt", `Number "1", `Number "2" } }, `Number "4" }, `Number "5" } }, `Number "6" }, `Number "7" } } } }
 ]=]
 
 r = parse(s)
@@ -989,7 +1026,7 @@ repeat
 until a < 1
 ]=]
 e = [=[
-StmBlock [StmRepeat (StmBlock [StmAssign [VarID "a",VarID "b",VarID "c"] [ExpAdd (ExpNum 1.0) (ExpNum 1.0),ExpAdd (ExpNum 2.0) (ExpNum 2.0),ExpAdd (ExpNum 3.0) (ExpNum 3.0)],StmBreak]) (ExpLT (ExpVar (VarID "a")) (ExpNum 1.0))]
+{ `Repeat{ { `Set{ { `Id "a", `Id "b", `Id "c" }, { `Op{ "add", `Number "1", `Number "1" }, `Op{ "add", `Number "2", `Number "2" }, `Op{ "add", `Number "3", `Number "3" } } }, `Break }, `Op{ "lt", `Id "a", `Number "1" } } }
 ]=]
 
 r = parse(s)
@@ -1001,7 +1038,7 @@ s = [=[
 return
 ]=]
 e = [=[
-StmBlock [StmRet []]
+{ `Return }
 ]=]
 
 r = parse(s)
@@ -1011,7 +1048,7 @@ s = [=[
 return 1
 ]=]
 e = [=[
-StmBlock [StmRet [ExpNum 1.0]]
+{ `Return{ `Number "1" } }
 ]=]
 
 r = parse(s)
@@ -1021,7 +1058,7 @@ s = [=[
 return 1,1-2*3+4,"alo"
 ]=]
 e = [=[
-StmBlock [StmRet [ExpNum 1.0,ExpAdd (ExpSub (ExpNum 1.0) (ExpMul (ExpNum 2.0) (ExpNum 3.0))) (ExpNum 4.0),ExpStr "alo"]]
+{ `Return{ `Number "1", `Op{ "add", `Op{ "sub", `Number "1", `Op{ "mul", `Number "2", `Number "3" } }, `Number "4" }, `String "alo" } }
 ]=]
 
 r = parse(s)
@@ -1031,7 +1068,7 @@ s = [=[
 return;
 ]=]
 e = [=[
-StmBlock [StmRet []]
+{ `Return }
 ]=]
 
 r = parse(s)
@@ -1041,7 +1078,7 @@ s = [=[
 return 1;
 ]=]
 e = [=[
-StmBlock [StmRet [ExpNum 1.0]]
+{ `Return{ `Number "1" } }
 ]=]
 
 r = parse(s)
@@ -1051,7 +1088,7 @@ s = [=[
 return 1,1-2*3+4,"alo";
 ]=]
 e = [=[
-StmBlock [StmRet [ExpNum 1.0,ExpAdd (ExpSub (ExpNum 1.0) (ExpMul (ExpNum 2.0) (ExpNum 3.0))) (ExpNum 4.0),ExpStr "alo"]]
+{ `Return{ `Number "1", `Op{ "add", `Op{ "sub", `Number "1", `Op{ "mul", `Number "2", `Number "3" } }, `Number "4" }, `String "alo" } }
 ]=]
 
 r = parse(s)
@@ -1063,7 +1100,7 @@ s = [=[
 t = { [1] = "alo", alo = 1, 2; }
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "t"] [ExpTableConstructor ([ExpNum 2.0],[(ExpNum 1.0,ExpStr "alo"),(ExpStr "alo",ExpNum 1.0)])]]
+{ `Set{ { `Id "t" }, { `Table{ `Pair{ `Number "1", `String "alo" }, `Pair{ `String "alo", `Number "1" }, `Number "2" } } } }
 ]=]
 
 r = parse(s)
@@ -1073,7 +1110,7 @@ s = [=[
 t = { 1.5 }
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "t"] [ExpTableConstructor ([ExpNum 1.5],[])]]
+{ `Set{ { `Id "t" }, { `Table{ `Number "1.5" } } } }
 ]=]
 
 r = parse(s)
@@ -1089,7 +1126,7 @@ t = {1,2;
 5}
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "t"] [ExpTableConstructor ([ExpNum 1.0,ExpNum 2.0,ExpNum 3.0,ExpNum 4.0,ExpNum 5.0],[])]]
+{ `Set{ { `Id "t" }, { `Table{ `Number "1", `Number "2", `Number "3", `Number "4", `Number "5" } } } }
 ]=]
 
 r = parse(s)
@@ -1105,7 +1142,7 @@ t = {[1]=1,[2]=2;
 [5]=5}
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "t"] [ExpTableConstructor ([],[(ExpNum 1.0,ExpNum 1.0),(ExpNum 2.0,ExpNum 2.0),(ExpNum 3.0,ExpNum 3.0),(ExpNum 4.0,ExpNum 4.0),(ExpNum 5.0,ExpNum 5.0)])]]
+{ `Set{ { `Id "t" }, { `Table{ `Pair{ `Number "1", `Number "1" }, `Pair{ `Number "2", `Number "2" }, `Pair{ `Number "3", `Number "3" }, `Pair{ `Number "4", `Number "4" }, `Pair{ `Number "5", `Number "5" } } } } }
 ]=]
 
 r = parse(s)
@@ -1115,7 +1152,7 @@ s = [=[
 local t = {{{}}, {"alo"}}
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["t"] [ExpTableConstructor ([ExpTableConstructor ([ExpTableConstructor ([],[])],[]),ExpTableConstructor ([ExpStr "alo"],[])],[])]]
+{ `Local{ { `Id "t" }, { `Table{ `Table{ `Table }, `Table{ `String "alo" } } } } }
 ]=]
 
 r = parse(s)
@@ -1129,7 +1166,7 @@ function f (...)
 end
 ]=]
 e = [=[
-StmBlock [StmFunction (Function ["f"]) ([],True) (StmBlock [StmRet [ExpDots]])]
+{ `Set{ { `Id "f" }, { `Function{ { `Dots }, { `Return{ `Dots } } } } } }
 ]=]
 
 r = parse(s)
@@ -1143,7 +1180,7 @@ function f ()
 end
 ]=]
 e = [=[
-StmBlock [StmFunction (Function ["f"]) ([],False) (StmBlock [StmFunction (Function ["g"]) (["x","y"],True) (StmBlock [StmRet [ExpDots,ExpDots,ExpDots]])])]
+{ `Set{ { `Id "f" }, { `Function{ {  }, { `Set{ { `Id "g" }, { `Function{ { `Id "x", `Id "y", `Dots }, { `Return{ `Dots, `Dots, `Dots } } } } } } } } } }
 ]=]
 
 r = parse(s)
@@ -1155,7 +1192,7 @@ local function f (x, ...)
 end
 ]=]
 e = [=[
-StmBlock [StmLocalFunction "f" (["x"],True) (StmBlock [StmRet [ExpDots]])]
+{ `Localrec{ { `Id "f" }, { `Function{ { `Id "x", `Dots }, { `Return{ `Dots } } } } } }
 ]=]
 
 r = parse(s)
@@ -1167,7 +1204,7 @@ local f = function (x, ...)
 end
 ]=]
 e = [=[
-StmBlock [StmLocalVar ["f"] [ExpFunction (["x"],True) (StmBlock [StmRet [ExpDots]])]]
+{ `Local{ { `Id "f" }, { `Function{ { `Id "x", `Dots }, { `Return{ `Dots } } } } } }
 ]=]
 
 r = parse(s)
@@ -1183,13 +1220,15 @@ do
 end
 ]=]
 e = [=[
-StmBlock [StmAssign [VarID "i"] [ExpNum 0.0],StmWhile (ExpLT (ExpVar (VarID "i")) (ExpNum 10.0)) (StmBlock [StmAssign [VarID "i"] [ExpAdd (ExpVar (VarID "i")) (ExpNum 1.0)]])]
+{ `Set{ { `Id "i" }, { `Number "0" } }, `While{ `Paren{ `Op{ "lt", `Id "i", `Number "10" } }, { `Set{ { `Id "i" }, { `Op{ "add", `Id "i", `Number "1" } } } } } }
 ]=]
 
 r = parse(s)
 assert(r == e)
 
 -- syntax error
+
+if not metalua then
 
 -- anonymous functions
 
@@ -1504,5 +1543,7 @@ test.lua:3:3: syntax error, unexpected 'i', expecting 'do', 'or', 'and', '>', '<
 
 r = parse(s)
 assert(r == e)
+
+end
 
 print("OK")
