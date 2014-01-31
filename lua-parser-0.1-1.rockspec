@@ -2,7 +2,7 @@
 package = "lua-parser"
 version = "0.1-1"
 source = {
-   url = "https://github.com/andremm/lua-parser",
+   url = "git://github.com/andremm/lua-parser",
    tag = "v0.1",
 }
 description = {

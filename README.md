@@ -83,5 +83,7 @@ Usage
 **Running the above code example using a string with syntax error:**
 
     $ lua parse.lua "for i=1, 10 do print(i) "
-    exemplo1.lua:1:24: syntax error, unexpected 'EOF', expecting 'end', 'return', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';', '=', ',', 'String', '{', '(', ':', '[', '.'
+    exemplo1.lua:1:24: syntax error, unexpected 'EOF', expecting 'end',
+    'return', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat',
+    'for', 'do', 'while', 'if', ';', '=', ',', 'String', '{', '(', ':', '[',  '.'
 
