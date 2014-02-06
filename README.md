@@ -18,15 +18,7 @@ API
 The package `lua-parser` has two modules: `lua-parser.parser`
 and `lua-parser.pp`.
 
-The module `lua-parser.parser` implements the parser and provides
-two functions for generating the AST:
-
-* `parser.parse_from_file (filename)`
-
-    Opens the given filename, which should be a string, reads its contents,
-    and tries to parse it.
-    It returns the AST in case of success, and **nil** plus an error message
-    otherwise.
+The module `lua-parser.parser` implements the function `parser.parse`:
 
 * `parser.parse (subject, filename)`
 
@@ -50,7 +42,7 @@ a dump function:
 * `pp.dump (ast[, i])`
 
     It dumps the AST to the screen.
-    The parameter **i** sets the identation level.
+    The parameter **i** sets the indentation level.
 
 Usage
 --------
