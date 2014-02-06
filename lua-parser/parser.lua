@@ -1,7 +1,54 @@
+--[[
+This module implements a parser for Lua 5.2 with LPeg,
+and generates an Abstract Syntax Tree in the Metalua format.
+For more information about Metalua, please, visit:
+https://github.com/fab13n/metalua-parser
+
+block: { stat* }
+
+stat:
+  `Do{ stat* }
+  | `Set{ {lhs+} {expr+} }                    -- lhs1, lhs2... = e1, e2...
+  | `While{ expr block }                      -- while e do b end
+  | `Repeat{ block expr }                     -- repeat b until e
+  | `If{ (expr block)+ block? }               -- if e1 then b1 [elseif e2 then b2] ... [else bn] end
+  | `Fornum{ ident expr expr expr? block }    -- for ident = e, e[, e] do b end
+  | `Forin{ {ident+} {expr+} block }          -- for i1, i2... in e1, e2... do b end
+  | `Local{ {ident+} {expr+}? }               -- local i1, i2... = e1, e2...
+  | `Localrec{ ident expr }                   -- only used for 'local function'
+  | `Goto{ <string> }                         -- goto str
+  | `Label{ <string> }                        -- ::str::
+  | `Return{ <expr*> }                        -- return e1, e2...
+  | `Break                                    -- break
+  | apply
+
+expr:
+  `Nil
+  | `Dots
+  | `True
+  | `False
+  | `Number{ <number> }
+  | `String{ <string> }
+  | `Function{ { `Id{ <string> }* `Dots? } block }
+  | `Table{ ( `Pair{ expr expr } | expr )* }
+  | `Op{ opid expr expr? }
+  | `Paren{ expr }       -- significant to cut multiple values returns
+  | apply
+  | lhs
+
+apply:
+  `Call{ expr expr* }
+  | `Invoke{ expr `String{ <string> } expr* }
+
+lhs: `Id{ <string> } | `Index{ expr expr }
+
+opid: 'add' | 'sub' | 'mul' | 'div' | 'mod' | 'pow' | 'concat'
+  | 'eq' | 'lt' | 'le' | 'and' | 'or' | 'not' | 'unm' | 'len'
+]]
 local parser = {}
 
 local lpeg = require "lpeg"
-local utils = require "lua-parser.utils"
+local scope = require "lua-parser.scope"
 
 lpeg.locale(lpeg)
 
@@ -12,11 +59,11 @@ local alpha, digit, alnum = lpeg.alpha, lpeg.digit, lpeg.alnum
 local xdigit = lpeg.xdigit
 local space = lpeg.space
 
-local lineno = utils.lineno
-local new_scope, end_scope = utils.new_scope, utils.end_scope
-local new_function, end_function = utils.new_function, utils.end_function
-local begin_loop, end_loop = utils.begin_loop, utils.end_loop
-local insideloop = utils.insideloop
+local lineno = scope.lineno
+local new_scope, end_scope = scope.new_scope, scope.end_scope
+local new_function, end_function = scope.new_function, scope.end_function
+local begin_loop, end_loop = scope.begin_loop, scope.end_loop
+local insideloop = scope.insideloop
 
 -- error message auxiliary functions
 

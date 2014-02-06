@@ -1,6 +1,9 @@
-local utils = {}
+--[[
+This module implements functions that handle scoping rules 
+]]
+local scope = {}
 
-function utils.lineno (s, i)
+function scope.lineno (s, i)
   if i == 1 then return 1, 1 end
   local l, lastline = 0, ""
   s = s:sub(1, i) .. "\n"
@@ -12,7 +15,7 @@ function utils.lineno (s, i)
   return l, c ~= 0 and c or 1
 end
 
-function utils.new_scope (env)
+function scope.new_scope (env)
   if not env.scope then
     env.scope = 0
   else
@@ -26,15 +29,15 @@ function utils.new_scope (env)
   env[scope]["goto"] = {}
 end
 
-function utils.begin_scope (env)
+function scope.begin_scope (env)
   env.scope = env.scope + 1
 end
 
-function utils.end_scope (env)
+function scope.end_scope (env)
   env.scope = env.scope - 1
 end
 
-function utils.new_function (env)
+function scope.new_function (env)
   if not env.fscope then
     env.fscope = 0
   else
@@ -44,15 +47,15 @@ function utils.new_function (env)
   env["function"][fscope] = {}
 end
 
-function utils.begin_function (env)
+function scope.begin_function (env)
   env.fscope = env.fscope + 1
 end
 
-function utils.end_function (env)
+function scope.end_function (env)
   env.fscope = env.fscope - 1
 end
 
-function utils.begin_loop (env)
+function scope.begin_loop (env)
   if not env.loop then
     env.loop = 1
   else
@@ -60,12 +63,12 @@ function utils.begin_loop (env)
   end
 end
 
-function utils.end_loop (env)
+function scope.end_loop (env)
   env.loop = env.loop - 1
 end
 
-function utils.insideloop (env)
+function scope.insideloop (env)
   return env.loop and env.loop > 0
 end
 
-return utils
+return scope
