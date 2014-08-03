@@ -42,8 +42,9 @@ apply:
 
 lhs: `Id{ <string> } | `Index{ expr expr }
 
-opid: 'add' | 'sub' | 'mul' | 'div' | 'mod' | 'pow' | 'concat'
-  | 'eq' | 'lt' | 'le' | 'and' | 'or' | 'not' | 'unm' | 'len'
+opid: 'add' | 'sub' | 'mul' | 'div' | 'idiv' | 'mod' | 'pow' | 'concat'
+  | 'band' | 'bor' | 'bxor' | 'shl' | 'shr' | 'eq' | 'lt' | 'le'
+  | 'and' | 'or' | 'not' | 'unm' | 'len' | 'bnot'
 ]]
 local parser = {}
 
@@ -152,9 +153,15 @@ local function binaryop (e1, op, e2)
          op == "sub" or
          op == "mul" or
          op == "div" or
+         op == "idiv" or
          op == "mod" or
          op == "pow" or
          op == "concat" or
+         op == "band" or
+         op == "bor" or
+         op == "bxor" or
+         op == "shl" or
+         op == "shr" or
          op == "eq" or
          op == "lt" or
          op == "le" or
@@ -227,13 +234,17 @@ local G = { V"Lua",
   SubExpr_1 = chainl1(V"SubExpr_2", V"OrOp");
   SubExpr_2 = chainl1(V"SubExpr_3", V"AndOp");
   SubExpr_3 = chainl1(V"SubExpr_4", V"RelOp");
-  SubExpr_4 = V"SubExpr_5" * V"ConOp" * V"SubExpr_4" / binaryop +
-              V"SubExpr_5";
-  SubExpr_5 = chainl1(V"SubExpr_6", V"AddOp");
-  SubExpr_6 = chainl1(V"SubExpr_7", V"MulOp");
-  SubExpr_7 = V"UnOp" * V"SubExpr_7" / unaryop +
-              V"SubExpr_8";
-  SubExpr_8 = V"SimpleExp" * (V"PowOp" * V"SubExpr_7")^-1 / binaryop;
+  SubExpr_4 = chainl1(V"SubExpr_5", V"BOrOp");
+  SubExpr_5 = chainl1(V"SubExpr_6", V"BXorOp");
+  SubExpr_6 = chainl1(V"SubExpr_7", V"BAndOp");
+  SubExpr_7 = chainl1(V"SubExpr_8", V"ShiftOp");
+  SubExpr_8 = V"SubExpr_9" * V"ConOp" * V"SubExpr_8" / binaryop +
+              V"SubExpr_9";
+  SubExpr_9 = chainl1(V"SubExpr_10", V"AddOp");
+  SubExpr_10 = chainl1(V"SubExpr_11", V"MulOp");
+  SubExpr_11 = V"UnOp" * V"SubExpr_11" / unaryop +
+              V"SubExpr_12";
+  SubExpr_12 = V"SimpleExp" * (V"PowOp" * V"SubExpr_11")^-1 / binaryop;
   SimpleExp = taggedCap("Number", token(V"Number", "Number")) +
               taggedCap("String", token(V"String", "String")) +
               taggedCap("Nil", kw("nil")) +
@@ -405,15 +416,22 @@ local G = { V"Lua",
           symb(">=") / "ge" +
           symb("<") / "lt" +
           symb(">") / "gt";
+  BOrOp = symb("|") / "bor";
+  BXorOp = symb("~") / "bxor";
+  BAndOp = symb("&") / "band";
+  ShiftOp = symb("<<") / "shl" +
+            symb(">>") / "shr";
   ConOp = symb("..") / "concat";
   AddOp = symb("+") / "add" +
           symb("-") / "sub";
   MulOp = symb("*") / "mul" +
+          symb("//") / "idiv" +
           symb("/") / "div" +
           symb("%") / "mod";
   UnOp = kw("not") / "not" +
          symb("-") / "unm" +
-         symb("#") / "len";
+         symb("#") / "len" +
+         symb("~") / "bnot";
   PowOp = symb("^") / "pow";
   Shebang = P"#" * (P(1) - P"\n")^0 * P"\n";
   -- for error reporting

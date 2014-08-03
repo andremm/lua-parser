@@ -1,7 +1,7 @@
 lua-parser
 ==========
 
-This is a Lua 5.2 parser written with LPeg that generates an AST in
+This is a Lua 5.3 parser written with LPeg that generates an AST in
 the format specified by [Metalua](https://github.com/fab13n/metalua-parser).
 The parser also implements an error reporting technique that is
 based on tracking the farthest failure position.
@@ -77,5 +77,5 @@ Usage
     $ lua parse.lua "for i=1, 10 do print(i) "
     exemplo1.lua:1:24: syntax error, unexpected 'EOF', expecting 'end',
     'return', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat',
-    'for', 'do', 'while', 'if', ';', '=', ',', 'String', '{', '(', ':', '[',  '.'
+    'for', 'do', 'while', 'if', ';', '=', ',', 'String', '{', '(', ':', '[', '.'
 
