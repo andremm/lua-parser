@@ -299,136 +299,136 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
--- syntax error
+-- -- syntax error
 
-if not metalua then
+-- if not metalua then
 
--- floating points
+-- -- floating points
 
-s = [=[
-f = 9e
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
-]=]
+-- s = [=[
+-- f = 9e
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-f = 5.e
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
-]=]
+-- s = [=[
+-- f = 5.e
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-f = .9e-
-]=]
-e = [=[
-test.lua:1:8: syntax error, unexpected '-', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
-]=]
+-- s = [=[
+-- f = .9e-
+-- ]=]
+-- e = [=[
+-- test.lua:1:8: syntax error, unexpected '-', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-f = 5.9e+
-]=]
-e = [=[
-test.lua:1:9: syntax error, unexpected '+', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
-]=]
+-- s = [=[
+-- f = 5.9e+
+-- ]=]
+-- e = [=[
+-- test.lua:1:9: syntax error, unexpected '+', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
--- integers
+-- -- integers
 
-s = [=[
--- invalid hexadecimal number
+-- s = [=[
+-- -- invalid hexadecimal number
 
-hex = 0xG
-]=]
-e = [=[
-test.lua:4:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
-]=]
+-- hex = 0xG
+-- ]=]
+-- e = [=[
+-- test.lua:4:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
--- long strings
+-- -- long strings
 
-s = [=[
---[==[
-testing long string3 begin
-]==]
+-- s = [=[
+-- --[==[
+-- testing long string3 begin
+-- ]==]
 
-ls3 = [===[
-testing
-unfinised
-long string
-]==]
+-- ls3 = [===[
+-- testing
+-- unfinised
+-- long string
+-- ]==]
 
---[==[
-[[ testing long string3 end ]]
-]==]
-]=]
-e = [=[
-test.lua:5:7: syntax error, unexpected '[', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- --[==[
+-- [[ testing long string3 end ]]
+-- ]==]
+-- ]=]
+-- e = [=[
+-- test.lua:5:7: syntax error, unexpected '[', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
--- short strings
+-- -- short strings
 
-s = [=[
--- short string test begin
+-- s = [=[
+-- -- short string test begin
 
-ss6 = "testing unfinished string
+-- ss6 = "testing unfinished string
 
--- short string test end
-]=]
-e = [=[
-test.lua:3:7: syntax error, unexpected '"', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- -- short string test end
+-- ]=]
+-- e = [=[
+-- test.lua:3:7: syntax error, unexpected '"', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
--- short string test begin
+-- s = [=[
+-- -- short string test begin
 
-ss7 = 'testing \\
-unfinished \\
-string'
+-- ss7 = 'testing \\
+-- unfinished \\
+-- string'
 
--- short string test end
-]=]
-e = [=[
-]=]
+-- -- short string test end
+-- ]=]
+-- e = [=[
+-- ]=]
 
-r = parse(s)
---assert(r == e)
+-- r = parse(s)
+-- --assert(r == e)
 
--- unfinished comments
+-- -- unfinished comments
 
-s = [=[
---[[ testing
-unfinished
-comment
-]=]
-e = [=[
-test.lua:3:1: syntax error, unexpected 'comment', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
-]=]
+-- s = [=[
+-- --[[ testing
+-- unfinished
+-- comment
+-- ]=]
+-- e = [=[
+-- test.lua:3:1: syntax error, unexpected 'comment', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-end
+-- end
 
 print("> testing parser...")
 
@@ -1046,8 +1046,8 @@ e = [=[
 { `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "not", `Op{ "eq", `Op{ "eq", `Op{ "le", `Number "3", `Op{ "lt", `Number "1", `Number "2" } }, `Number "4" }, `Number "5" } }, `Number "6" }, `Number "7" } } } }
 ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
 -- repeat
 
@@ -1258,500 +1258,500 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
--- syntax error
+-- -- syntax error
 
-if not metalua then
+-- if not metalua then
 
--- anonymous functions
+-- -- anonymous functions
 
-s = [=[
-a = function (a,b,) end
-]=]
-e = [=[
-test.lua:1:19: syntax error, unexpected ')', expecting '...', 'Name'
-]=]
+-- s = [=[
+-- a = function (a,b,) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:19: syntax error, unexpected ')', expecting '...', 'Name'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-a = function (...,a) end
-]=]
-e = [=[
-test.lua:1:18: syntax error, unexpected ',', expecting ')'
-]=]
+-- s = [=[
+-- a = function (...,a) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:18: syntax error, unexpected ',', expecting ')'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-local a = function (1) end
-]=]
-e = [=[
-test.lua:1:21: syntax error, unexpected '1', expecting ')', '...', 'Name'
-]=]
+-- s = [=[
+-- local a = function (1) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:21: syntax error, unexpected '1', expecting ')', '...', 'Name'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-local test = function ( a , b , c , ... )
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'EOF', expecting 'end', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
-]=]
+-- s = [=[
+-- local test = function ( a , b , c , ... )
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'EOF', expecting 'end', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
--- arithmetic expressions
+-- -- arithmetic expressions
 
-s = [=[
-a = 3 / / 2
-]=]
-e = [=[
-test.lua:1:9: syntax error, unexpected '/', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- s = [=[
+-- a = 3 / / 2
+-- ]=]
+-- e = [=[
+-- test.lua:1:9: syntax error, unexpected '/', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
--- bitwise expressions
+-- -- bitwise expressions
 
-s = [=[
-b = 1 && 1
-]=]
-e = [=[
-test.lua:1:8: syntax error, unexpected '&', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- s = [=[
+-- b = 1 && 1
+-- ]=]
+-- e = [=[
+-- test.lua:1:8: syntax error, unexpected '&', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-b = 1 <> 0
-]=]
-e = [=[
-test.lua:1:8: syntax error, unexpected '>', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- s = [=[
+-- b = 1 <> 0
+-- ]=]
+-- e = [=[
+-- test.lua:1:8: syntax error, unexpected '>', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
-s = [=[
-b = 1 < < 0
-]=]
-e = [=[
-test.lua:1:9: syntax error, unexpected '<', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- s = [=[
+-- b = 1 < < 0
+-- ]=]
+-- e = [=[
+-- test.lua:1:9: syntax error, unexpected '<', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-r = parse(s)
-assert(r == e)
+-- r = parse(s)
+-- assert(r == e)
 
+-- -- break
+
+-- s = [=[
 -- break
+-- ]=]
+-- e = [=[
+-- test.lua:1:1: syntax error, <break> not inside a loop
+-- ]=]
 
-s = [=[
-break
-]=]
-e = [=[
-test.lua:1:1: syntax error, <break> not inside a loop
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- function f (x)
+--   if 1 then break end
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:2:13: syntax error, <break> not inside a loop
+-- ]=]
 
-s = [=[
-function f (x)
-  if 1 then break end
-end
-]=]
-e = [=[
-test.lua:2:13: syntax error, <break> not inside a loop
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- while 1 do
+-- end
+-- break
+-- ]=]
+-- e = [=[
+-- test.lua:3:1: syntax error, <break> not inside a loop
+-- ]=]
 
-s = [=[
-while 1 do
-end
-break
-]=]
-e = [=[
-test.lua:3:1: syntax error, <break> not inside a loop
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- concatenation expressions
 
--- concatenation expressions
+-- s = [=[
+-- concat2 = 2^3..1
+-- ]=]
+-- e = [=[
+-- test.lua:1:15: syntax error, unexpected '.1', expecting 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';', ',', 'or', 'and', '>', '<', '>=', '<=', '==', '~=', '|', '~', '&', '>>', '<<', '..', '-', '+', '%', '/', '//', '*', '^'
+-- ]=]
 
-s = [=[
-concat2 = 2^3..1
-]=]
-e = [=[
-test.lua:1:15: syntax error, unexpected '.1', expecting 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';', ',', 'or', 'and', '>', '<', '>=', '<=', '==', '~=', '|', '~', '&', '>>', '<<', '..', '-', '+', '%', '/', '//', '*', '^'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- for generic
 
--- for generic
+-- s = [=[
+-- for k;v in pairs(t) do end
+-- ]=]
+-- e = [=[
+-- test.lua:1:6: syntax error, unexpected ';', expecting 'in', ',', '='
+-- ]=]
 
-s = [=[
-for k;v in pairs(t) do end
-]=]
-e = [=[
-test.lua:1:6: syntax error, unexpected ';', expecting 'in', ',', '='
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- for k,v in pairs(t:any) do end
+-- ]=]
+-- e = [=[
+-- test.lua:1:23: syntax error, unexpected ')', expecting 'String', '{', '('
+-- ]=]
 
-s = [=[
-for k,v in pairs(t:any) do end
-]=]
-e = [=[
-test.lua:1:23: syntax error, unexpected ')', expecting 'String', '{', '('
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- for numeric
 
--- for numeric
+-- s = [=[
+-- for i=1,10, do end
+-- ]=]
+-- e = [=[
+-- test.lua:1:13: syntax error, unexpected 'do', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-s = [=[
-for i=1,10, do end
-]=]
-e = [=[
-test.lua:1:13: syntax error, unexpected 'do', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- for i=1,n:number do end
+-- ]=]
+-- e = [=[
+-- test.lua:1:18: syntax error, unexpected 'do', expecting 'String', '{', '('
+-- ]=]
 
-s = [=[
-for i=1,n:number do end
-]=]
-e = [=[
-test.lua:1:18: syntax error, unexpected 'do', expecting 'String', '{', '('
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- global functions
 
--- global functions
+-- s = [=[
+-- function func(a,b,c,) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:21: syntax error, unexpected ')', expecting '...', 'Name'
+-- ]=]
 
-s = [=[
-function func(a,b,c,) end
-]=]
-e = [=[
-test.lua:1:21: syntax error, unexpected ')', expecting '...', 'Name'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- function func(...,a) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:18: syntax error, unexpected ',', expecting ')'
+-- ]=]
 
-s = [=[
-function func(...,a) end
-]=]
-e = [=[
-test.lua:1:18: syntax error, unexpected ',', expecting ')'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- function a.b:c:d () end
+-- ]=]
+-- e = [=[
+-- test.lua:1:15: syntax error, unexpected ':', expecting '('
+-- ]=]
 
-s = [=[
-function a.b:c:d () end
-]=]
-e = [=[
-test.lua:1:15: syntax error, unexpected ':', expecting '('
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- goto
 
--- goto
+-- s = [=[
+-- :: label :: return
+-- goto label
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'goto', expecting ';', '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-s = [=[
-:: label :: return
-goto label
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'goto', expecting ';', '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- goto label
+-- ]=]
+-- e = [=[
+-- test.lua:1:1: syntax error, no visible label 'label' for <goto>
+-- ]=]
 
-s = [=[
-goto label
-]=]
-e = [=[
-test.lua:1:1: syntax error, no visible label 'label' for <goto>
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- goto label
+-- ::other_label::
+-- ]=]
+-- e = [=[
+-- test.lua:1:1: syntax error, no visible label 'label' for <goto>
+-- ]=]
 
-s = [=[
-goto label
-::other_label::
-]=]
-e = [=[
-test.lua:1:1: syntax error, no visible label 'label' for <goto>
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- ::other_label::
+-- do do do goto label end end end
+-- ]=]
+-- e = [=[
+-- test.lua:2:10: syntax error, no visible label 'label' for <goto>
+-- ]=]
 
-s = [=[
-::other_label::
-do do do goto label end end end
-]=]
-e = [=[
-test.lua:2:10: syntax error, no visible label 'label' for <goto>
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- if-else
 
--- if-else
+-- s = [=[
+-- if a then
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'EOF', expecting 'end', 'else', 'elseif', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
+-- ]=]
 
-s = [=[
-if a then
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'EOF', expecting 'end', 'else', 'elseif', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- if a then else
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'EOF', expecting 'end', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
+-- ]=]
 
-s = [=[
-if a then else
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'EOF', expecting 'end', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- if a then
+--   return a
+-- elseif b then
+--   return b
+-- elseif
 
-s = [=[
-if a then
-  return a
-elseif b then
-  return b
-elseif
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:7:1: syntax error, unexpected 'end', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-end
-]=]
-e = [=[
-test.lua:7:1: syntax error, unexpected 'end', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- if a:any then else end
+-- ]=]
+-- e = [=[
+-- test.lua:1:10: syntax error, unexpected 'then', expecting 'String', '{', '('
+-- ]=]
 
-s = [=[
-if a:any then else end
-]=]
-e = [=[
-test.lua:1:10: syntax error, unexpected 'then', expecting 'String', '{', '('
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- labels
 
--- labels
+-- s = [=[
+-- :: blah ::
+-- :: not ::
+-- ]=]
+-- e = [=[
+-- test.lua:2:4: syntax error, unexpected 'not', expecting 'Name'
+-- ]=]
 
-s = [=[
-:: blah ::
-:: not ::
-]=]
-e = [=[
-test.lua:2:4: syntax error, unexpected 'not', expecting 'Name'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- ::label::
+-- ::other_label::
+-- ::label::
+-- ]=]
+-- e = [=[
+-- test.lua:3:1: syntax error, label 'label' already defined at line 1
+-- ]=]
 
-s = [=[
-::label::
-::other_label::
-::label::
-]=]
-e = [=[
-test.lua:3:1: syntax error, label 'label' already defined at line 1
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- locals
 
--- locals
+-- s = [=[
+-- local a =
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'EOF', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-s = [=[
-local a =
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'EOF', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- local function t.a() end
+-- ]=]
+-- e = [=[
+-- test.lua:1:17: syntax error, unexpected '.', expecting '('
+-- ]=]
 
-s = [=[
-local function t.a() end
-]=]
-e = [=[
-test.lua:1:17: syntax error, unexpected '.', expecting '('
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- local function test (a,) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:24: syntax error, unexpected ')', expecting '...', 'Name'
+-- ]=]
 
-s = [=[
-local function test (a,) end
-]=]
-e = [=[
-test.lua:1:24: syntax error, unexpected ')', expecting '...', 'Name'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- local function test(...,a) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:24: syntax error, unexpected ',', expecting ')'
+-- ]=]
 
-s = [=[
-local function test(...,a) end
-]=]
-e = [=[
-test.lua:1:24: syntax error, unexpected ',', expecting ')'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- local function (a, b, c, ...) end
+-- ]=]
+-- e = [=[
+-- test.lua:1:16: syntax error, unexpected '(', expecting 'Name'
+-- ]=]
 
-s = [=[
-local function (a, b, c, ...) end
-]=]
-e = [=[
-test.lua:1:16: syntax error, unexpected '(', expecting 'Name'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- repeat
 
+-- s = [=[
 -- repeat
+--   a,b,c = 1+1,2+2,3+3
+--   break
+-- ]=]
+-- e = [=[
+-- test.lua:4:1: syntax error, unexpected 'EOF', expecting 'until', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
+-- ]=]
 
-s = [=[
-repeat
-  a,b,c = 1+1,2+2,3+3
-  break
-]=]
-e = [=[
-test.lua:4:1: syntax error, unexpected 'EOF', expecting 'until', 'return', '(', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat', 'for', 'do', 'while', 'if', ';'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- return
 
+-- s = [=[
 -- return
+-- return 1
+-- return 1,1-2*3+4,"alo"
+-- return;
+-- return 1;
+-- return 1,1-2*3+4,"alo";
+-- ]=]
+-- e = [=[
+-- test.lua:2:1: syntax error, unexpected 'return', expecting ';', '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
+-- ]=]
 
-s = [=[
-return
-return 1
-return 1,1-2*3+4,"alo"
-return;
-return 1;
-return 1,1-2*3+4,"alo";
-]=]
-e = [=[
-test.lua:2:1: syntax error, unexpected 'return', expecting ';', '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- tables
 
--- tables
+-- s = [=[
+-- t = { , }
+-- ]=]
+-- e = [=[
+-- test.lua:1:7: syntax error, unexpected ',', expecting '}', '(', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not', 'Name', '['
+-- ]=]
 
-s = [=[
-t = { , }
-]=]
-e = [=[
-test.lua:1:7: syntax error, unexpected ',', expecting '}', '(', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not', 'Name', '['
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- vararg
 
--- vararg
+-- s = [=[
+-- function f ()
+--   return ...
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:2:10: syntax error, cannot use '...' outside a vararg function
+-- ]=]
 
-s = [=[
-function f ()
-  return ...
-end
-]=]
-e = [=[
-test.lua:2:10: syntax error, cannot use '...' outside a vararg function
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- function f ()
+--   function g (x, y)
+--     return ...,...,...
+--   end
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:3:12: syntax error, cannot use '...' outside a vararg function
+-- ]=]
 
-s = [=[
-function f ()
-  function g (x, y)
-    return ...,...,...
-  end
-end
-]=]
-e = [=[
-test.lua:3:12: syntax error, cannot use '...' outside a vararg function
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- local function f (x)
+--   return ...
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:2:10: syntax error, cannot use '...' outside a vararg function
+-- ]=]
 
-s = [=[
-local function f (x)
-  return ...
-end
-]=]
-e = [=[
-test.lua:2:10: syntax error, cannot use '...' outside a vararg function
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- s = [=[
+-- local f = function (x)
+--   return ...
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:2:10: syntax error, cannot use '...' outside a vararg function
+-- ]=]
 
-s = [=[
-local f = function (x)
-  return ...
-end
-]=]
-e = [=[
-test.lua:2:10: syntax error, cannot use '...' outside a vararg function
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
+-- -- while
 
--- while
+-- s = [=[
+-- i = 0
+-- while (i < 10)
+--   i = i + 1
+-- end
+-- ]=]
+-- e = [=[
+-- test.lua:3:3: syntax error, unexpected 'i', expecting 'do', 'or', 'and', '>', '<', '>=', '<=', '==', '~=', '|', '~', '&', '>>', '<<', '..', '-', '+', '%', '/', '//', '*', '^', 'String', '{', '(', ':', '[', '.'
+-- ]=]
 
-s = [=[
-i = 0
-while (i < 10)
-  i = i + 1
-end
-]=]
-e = [=[
-test.lua:3:3: syntax error, unexpected 'i', expecting 'do', 'or', 'and', '>', '<', '>=', '<=', '==', '~=', '|', '~', '&', '>>', '<<', '..', '-', '+', '%', '/', '//', '*', '^', 'String', '{', '(', ':', '[', '.'
-]=]
+-- r = parse(s)
+-- assert(r == e)
 
-r = parse(s)
-assert(r == e)
-
-end
+-- end
 
 print("OK")
