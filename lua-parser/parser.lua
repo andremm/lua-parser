@@ -48,7 +48,7 @@ opid: 'add' | 'sub' | 'mul' | 'div' | 'idiv' | 'mod' | 'pow' | 'concat'
 ]]
 local parser = {}
 
-local lpeg = require "lpeg"
+local lpeg = require "lpeglabel"
 local scope = require "lua-parser.scope"
 
 lpeg.locale(lpeg)
@@ -56,6 +56,8 @@ lpeg.locale(lpeg)
 local P, S, V = lpeg.P, lpeg.S, lpeg.V
 local C, Carg, Cb, Cc = lpeg.C, lpeg.Carg, lpeg.Cb, lpeg.Cc
 local Cf, Cg, Cmt, Cp, Ct = lpeg.Cf, lpeg.Cg, lpeg.Cmt, lpeg.Cp, lpeg.Ct
+local Lc, T = lpeg.Lc, lpeg.T
+
 local alpha, digit, alnum = lpeg.alpha, lpeg.digit, lpeg.alnum
 local xdigit = lpeg.xdigit
 local space = lpeg.space
@@ -67,6 +69,96 @@ local begin_loop, end_loop = scope.begin_loop, scope.end_loop
 local insideloop = scope.insideloop
 
 -- error message auxiliary functions
+
+local labels = {
+  { "ExpExprIf", "expected a condition after 'if'" },
+  { "ExpThenIf", "expected 'then' after the condition" },
+  { "ExpExprEIf", "expected a condition after 'elseif'" },
+  { "ExpThenEIf", "expected 'then' after the condition" },
+  { "ExpEndIf", "expected 'end' to close the if statement" },
+  { "ExpEndDo", "expected 'end' to close the do block" },
+  { "ExpExprWhile", "expected a condition after 'while'" },
+  { "ExpDoWhile", "expected 'do' after the condition" },
+  { "ExpEndWhile", "expected 'end' to close the while loop" },
+  { "ExpUntilRep", "expected 'until' after the condition" },
+  { "ExpExprRep", "expected a condition after 'until'" },
+
+  { "ExpForRange", "expected a numeric or generic range after 'for'" },
+  { "ExpEndFor", "expected 'end' to close the for loop" },
+  { "ExpExprFor1", "expected a starting expression for the numeric range " },
+  { "ExpCommaFor", "expected a comma to split the start and end of the range" },
+  { "ExpExprFor2", "expected an ending expression for the numeric range" },
+  { "ExpExprFor3", "expected a step expression for the numeric range after the comma" },
+  { "ExpInFor", "expected 'in' after the variable names" },
+  { "ExpEListFor", "expected one or more expressions after 'in'" },
+  { "ExpDoFor", "expected 'do' after the range of the for loop" },
+
+  { "ExpDefLocal", "expected a function definition or assignment after 'local'" },
+  { "ExpNameLFunc", "expected an identifier after 'function'" },
+  { "ExpEListLAssign", "expected one or more expressions after '='" },
+  { "ExpFuncName", "expected a function name after 'function'" },
+  { "ExpNameFunc1", "expected an identifier after the dot" },
+  { "ExpNameFunc2", "expected an identifier after the colon" },
+  { "ExpOpenParenParams", "expected opening '(' for the parameter list" },
+  { "MisCloseParenParams", "missing closing ')' to end the parameter list" },
+  { "ExpEndFunc", "expected 'end' to close the function body" },
+
+  { "ExpLHSComma", "expected a variable or table field after the comma" },
+  { "ExpEListAssign", "expected one or more expressions after '='" },
+  { "ExpLabelName", "expected a label name after '::'" },
+  { "MisCloseLabel", "missing closing '::' after the label" },
+  { "ExpLabel", "expected a label name after 'goto'" },
+  { "ExpExprCommaRet", "expected an expression after the comma" },
+  { "ExpNameNList", "expected an identifier after the comma" },
+  { "ExpExprEList", "expected an expression after the comma" },
+
+  { "ExpExprSub1", "expected an expression after the 'or' operator" },
+  { "ExpExprSub2", "expected an expression after the 'and' operator" },
+  { "ExpExprSub3", "expected an expression after the relational operator" },
+  { "ExpExprSub4", "expected an expression after the '|' operator" },
+  { "ExpExprSub5", "expected an expression after the '~' operator" },
+  { "ExpExprSub6", "expected an expression after the '&' operator" },
+  { "ExpExprSub7", "expected an expression after the bitshift operator" },
+  { "ExpExprSub8", "expected an expression after the '..' operator" },
+  { "ExpExprSub9", "expected an expression after the additive operator" },
+  { "ExpExprSub10", "expected an expression after the multiplicative operator" },
+  { "ExpExprSub11", "expected an expression after the unary operator" },
+  { "ExpExprSub12", "expected an expression after the '^' operator" },
+
+  { "ExpNameDot", "expected a field name after the dot" },
+  { "MisCloseBracketIndex", "missing closing ']' in the table indexing" },
+  { "ExpNameColon", "expected an identifier after the colon" },
+  { "ExpFuncArgs", "expected at least one argument in the method call" },
+  { "ExpExprParen", "expected an expression after '('" },
+  { "MisCloseParenExpr", "missing closing ')' in the parenthesized expression" },
+
+  { "ExpExprArgs", "expected an expression after the comma in the argument list" },
+  { "MisCloseParenArgs", "expected closing ')' to end the argument list" },
+
+  { "MisCloseBrace", "missing closing '}' for the table constructor" },
+  { "MisCloseBracket", "missing closing ']' in the key" },
+  { "ExpEqField1", "expected '=' after the key" },
+  { "ExpExprField1", "expected an expression after '='" },
+  { "ExpEqField2", "expected '=' after the field name" },
+  { "ExpExprField2", "expected an expression after '='" },
+
+  { "ExpDigitsHex", "expected one or more hexadecimal digits" },
+  { "ExpDigitsPoint", "expected one or more digits after the decimal point" },
+  { "ExpDigitsExpo", "expected one or more digits for the exponent" },
+  { "MisTermDQuote", "missing terminating double quote for the string" },
+  { "MisTermSQuote", "missing terminating single quote for the string" },
+  { "MisTermLStr", "missing closing delimiter for the multi-line string (must have same '='s)" },
+}
+
+local function expect(patt, label)
+  for i, labelinfo in ipairs(labels) do
+    if labelinfo[1] == label then
+      return patt + T(i)
+    end
+  end
+
+  error("Label not found: " .. label)
+end
 
 -- creates an error message for the input string
 local function syntaxerror (errorinfo, pos, msg)
@@ -181,8 +273,8 @@ local function chainl (pat, sep, a)
   return Cf(pat * Cg(sep * pat)^0, binaryop) + a
 end
 
-local function chainl1 (pat, sep)
-  return Cf(pat * Cg(sep * pat)^0, binaryop)
+local function chainl1 (pat, sep, label)
+  return Cf(pat * Cg(sep * expect(pat, label))^0, binaryop)
 end
 
 local function sepby (pat, sep, tag)
@@ -220,31 +312,31 @@ local G = { V"Lua",
   Id = taggedCap("Id", token(V"Name", "Name"));
   FunctionDef = kw("function") * V"FuncBody";
   FieldSep = symb(",") + symb(";");
-  Field = taggedCap("Pair", (symb("[") * V"Expr" * symb("]") * symb("=") * V"Expr") +
-                    (taggedCap("String", token(V"Name", "Name")) * symb("=") * V"Expr")) +
+  Field = taggedCap("Pair", (symb("[") * V"Expr" * expect(symb("]"), "MisCloseBracket") * expect(symb("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1")) +
+                    (taggedCap("String", token(V"Name", "Name")) * expect(symb("="), "ExpEqField2") * expect(V"Expr", "ExpExprField2"))) +
           V"Expr";
   FieldList = (V"Field" * (V"FieldSep" * V"Field")^0 * V"FieldSep"^-1)^-1;
-  Constructor = taggedCap("Table", symb("{") * V"FieldList" * symb("}"));
+  Constructor = taggedCap("Table", symb("{") * V"FieldList" * expect(symb("}"), "MisCloseBrace"));
   NameList = sepby1(V"Id", symb(","), "NameList");
   ExpList = sepby1(V"Expr", symb(","), "ExpList");
   FuncArgs = symb("(") * (V"Expr" * (symb(",") * V"Expr")^0)^-1 * symb(")") +
              V"Constructor" +
              taggedCap("String", token(V"String", "String"));
   Expr = V"SubExpr_1";
-  SubExpr_1 = chainl1(V"SubExpr_2", V"OrOp");
-  SubExpr_2 = chainl1(V"SubExpr_3", V"AndOp");
-  SubExpr_3 = chainl1(V"SubExpr_4", V"RelOp");
-  SubExpr_4 = chainl1(V"SubExpr_5", V"BOrOp");
-  SubExpr_5 = chainl1(V"SubExpr_6", V"BXorOp");
-  SubExpr_6 = chainl1(V"SubExpr_7", V"BAndOp");
-  SubExpr_7 = chainl1(V"SubExpr_8", V"ShiftOp");
-  SubExpr_8 = V"SubExpr_9" * V"ConOp" * V"SubExpr_8" / binaryop +
+  SubExpr_1 = chainl1(V"SubExpr_2", V"OrOp", "ExpExprSub1");
+  SubExpr_2 = chainl1(V"SubExpr_3", V"AndOp", "ExpExprSub2");
+  SubExpr_3 = chainl1(V"SubExpr_4", V"RelOp", "ExpExprSub3");
+  SubExpr_4 = chainl1(V"SubExpr_5", V"BOrOp", "ExpExprSub4");
+  SubExpr_5 = chainl1(V"SubExpr_6", V"BXorOp", "ExpExprSub5");
+  SubExpr_6 = chainl1(V"SubExpr_7", V"BAndOp", "ExpExprSub6");
+  SubExpr_7 = chainl1(V"SubExpr_8", V"ShiftOp", "ExpExprSub7");
+  SubExpr_8 = V"SubExpr_9" * V"ConOp" * expect(V"SubExpr_8", "ExpExprSub8") / binaryop +
               V"SubExpr_9";
-  SubExpr_9 = chainl1(V"SubExpr_10", V"AddOp");
-  SubExpr_10 = chainl1(V"SubExpr_11", V"MulOp");
-  SubExpr_11 = V"UnOp" * V"SubExpr_11" / unaryop +
+  SubExpr_9 = chainl1(V"SubExpr_10", V"AddOp", "ExpExprSub9");
+  SubExpr_10 = chainl1(V"SubExpr_11", V"MulOp", "ExpExprSub10");
+  SubExpr_11 = V"UnOp" * expect(V"SubExpr_11", "ExpExprSub11") / unaryop +
               V"SubExpr_12";
-  SubExpr_12 = V"SimpleExp" * (V"PowOp" * V"SubExpr_11")^-1 / binaryop;
+  SubExpr_12 = V"SimpleExp" * (V"PowOp" * expect(V"SubExpr_11", "ExpExprSub12"))^-1 / binaryop;
   SimpleExp = taggedCap("Number", token(V"Number", "Number")) +
               taggedCap("String", token(V"String", "String")) +
               taggedCap("Nil", kw("nil")) +
@@ -255,9 +347,9 @@ local G = { V"Lua",
               V"Constructor" +
               V"SuffixedExp";
   SuffixedExp = Cf(V"PrimaryExp" * (
-                  taggedCap("DotIndex", symb(".") * taggedCap("String", token(V"Name", "Name"))) +
-                  taggedCap("ArrayIndex", symb("[") * V"Expr" * symb("]")) +
-                  taggedCap("Invoke", Cg(symb(":") * taggedCap("String", token(V"Name", "Name")) * V"FuncArgs")) +
+                  taggedCap("DotIndex", symb(".") * expect(taggedCap("String", token(V"Name", "Name")), "ExpNameDot")) +
+                  taggedCap("ArrayIndex", symb("[") * V"Expr" * expect(symb("]"), "MisCloseBracketIndex")) +
+                  taggedCap("Invoke", Cg(symb(":") * expect(taggedCap("String", token(V"Name", "Name")), "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs"))) +
                   taggedCap("Call", V"FuncArgs")
                 )^0, function (t1, t2)
                        if t2 then
@@ -274,36 +366,36 @@ local G = { V"Lua",
                        return t1
                      end);
   PrimaryExp = V"Var" +
-               taggedCap("Paren", symb("(") * V"Expr" * symb(")"));
+               taggedCap("Paren", symb("(") * expect(V"Expr", "ExpExprParen") * expect(symb(")"), "MisCloseParenExpr"));
   Block = taggedCap("Block", V"StatList" * V"RetStat"^-1);
   IfStat = taggedCap("If",
-             kw("if") * V"Expr" * kw("then") * V"Block" *
-             (kw("elseif") * V"Expr" * kw("then") * V"Block")^0 *
+             kw("if") * expect(V"Expr", "ExpExprIf") * expect(kw("then"), "ExpThenIf") * V"Block" *
+             (kw("elseif") * expect(V"Expr", "ExpExprEIf") * expect(kw("then"), "ExpThenEIf") * V"Block")^0 *
              (kw("else") * V"Block")^-1 *
-             kw("end"));
-  WhileStat = taggedCap("While", kw("while") * V"Expr" *
-                kw("do") * V"Block" * kw("end"));
-  DoStat = kw("do") * V"Block" * kw("end") /
+             expect(kw("end"), "ExpEndIf"));
+  WhileStat = taggedCap("While", kw("while") * expect(V"Expr", "ExpExprWhile") *
+                expect(kw("do"), "ExpDoWhile") * V"Block" * expect(kw("end"), "ExpEndWhile"));
+  DoStat = kw("do") * V"Block" * expect(kw("end"), "ExpEndDo") /
            function (t)
              t.tag = "Do"
              return t
            end;
-  ForBody = kw("do") * V"Block";
+  ForBody = expect(kw("do"), "ExpDoFor") * V"Block";
   ForNum = taggedCap("Fornum",
-             V"Id" * symb("=") * V"Expr" * symb(",") *
-             V"Expr" * (symb(",") * V"Expr")^-1 *
+             V"Id" * symb("=") * expect(V"Expr", "ExpExprFor1") * expect(symb(","), "ExpCommaFor") *
+             expect(V"Expr", "ExpExprFor2") * (symb(",") * expect(V"Expr", "ExpExprFor3"))^-1 *
              V"ForBody");
-  ForGen = taggedCap("Forin", V"NameList" * kw("in") * V"ExpList" * V"ForBody");
-  ForStat = kw("for") * (V"ForNum" + V"ForGen") * kw("end");
+  ForGen = taggedCap("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExpList", "ExpEListFor") * V"ForBody");
+  ForStat = kw("for") * expect(V"ForNum" + V"ForGen", "ExpForRange") * expect(kw("end"), "ExpEndFor");
   RepeatStat = taggedCap("Repeat", kw("repeat") * V"Block" *
-                 kw("until") * V"Expr");
-  FuncName = Cf(V"Id" * (symb(".") * taggedCap("String", token(V"Name", "Name")))^0,
+                 expect(kw("until"), "ExpUntilRep") * expect(V"Expr", "ExpExprRep"));
+  FuncName = Cf(V"Id" * (symb(".") * expect(taggedCap("String", token(V"Name", "Name")), "ExpNameFunc1"))^0,
              function (t1, t2)
                if t2 then
                  return {tag = "Index", pos = t1.pos, [1] = t1, [2] = t2}
                end
                return t1
-             end) * (symb(":") * taggedCap("String", token(V"Name", "Name")))^-1 /
+             end) * (symb(":") * expect(taggedCap("String", token(V"Name", "Name")), "ExpNameFunc2"))^-1 /
              function (t1, t2)
                if t2 then
                  return {tag = "Index", pos = t1.pos, is_method = true, [1] = t1, [2] = t2}
@@ -323,26 +415,26 @@ local G = { V"Lua",
   -- Cc({}) generates a strange bug when parsing [[function t:a() end ; function t.a() end]]
   -- the bug is to add the parameter self to the second function definition
   --FuncBody = taggedCap("Function", symb("(") * (V"ParList" + Cc({})) * symb(")") * V"Block" * kw("end"));
-  FuncBody = taggedCap("Function", symb("(") * V"ParList" * symb(")") * V"Block" * kw("end"));
-  FuncStat = taggedCap("Set", kw("function") * V"FuncName" * V"FuncBody") /
+  FuncBody = taggedCap("Function", expect(symb("("), "ExpOpenParenParams") * V"ParList" * expect(symb(")"), "MisCloseParenParams") * V"Block" * expect(kw("end"), "ExpEndFunc"));
+  FuncStat = taggedCap("Set", kw("function") * expect(V"FuncName", "ExpFuncName") * V"FuncBody") /
              function (t)
                if t[1].is_method then table.insert(t[2][1], 1, {tag = "Id", [1] = "self"}) end
                t[1] = {t[1]}
                t[2] = {t[2]}
                return t
              end;
-  LocalFunc = taggedCap("Localrec", kw("function") * V"Id" * V"FuncBody") /
+  LocalFunc = taggedCap("Localrec", kw("function") * expect(V"Id", "ExpNameLFunc") * V"FuncBody") /
               function (t)
                 t[1] = {t[1]}
                 t[2] = {t[2]}
                 return t
               end;
-  LocalAssign = taggedCap("Local", V"NameList" * ((symb("=") * V"ExpList") + Ct(Cc())));
-  LocalStat = kw("local") * (V"LocalFunc" + V"LocalAssign");
-  LabelStat = taggedCap("Label", symb("::") * token(V"Name", "Name") * symb("::"));
+  LocalAssign = taggedCap("Local", V"NameList" * ((symb("=") * expect(V"ExpList", "ExpEListLAssign")) + Ct(Cc())));
+  LocalStat = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "ExpDefLocal");
+  LabelStat = taggedCap("Label", symb("::") * expect(token(V"Name", "Name"), "ExpLabelName") * expect(symb("::"), "MisCloseLabel"));
   BreakStat = taggedCap("Break", kw("break"));
-  GoToStat = taggedCap("Goto", kw("goto") * token(V"Name", "Name"));
-  RetStat = taggedCap("Return", kw("return") * (V"Expr" * (symb(",") * V"Expr")^0)^-1 * symb(";")^-1);
+  GoToStat = taggedCap("Goto", kw("goto") * expect(token(V"Name", "Name"), "ExpLabel"));
+  RetStat = taggedCap("Return", kw("return") * (V"Expr" * (symb(",") * expect(V"Expr", "ExpExprCommaRet"))^0)^-1 * symb(";")^-1);
   ExprStat = Cmt(
              (V"SuffixedExp" *
                 (Cc(function (...)
@@ -372,7 +464,7 @@ local G = { V"Lua",
                            return false
                          end)))
              , function (s, i, s1, f, ...) return f(s1, ...) end);
-  Assignment = ((symb(",") * V"SuffixedExp")^1)^-1 * symb("=") * V"ExpList";
+  Assignment = ((symb(",") * expect(V"SuffixedExp", "ExpLHSComma"))^1)^-1 * symb("=") * expect(V"ExpList", "ExpEListAssign");
   Stat = V"IfStat" + V"WhileStat" + V"DoStat" + V"ForStat" +
          V"RepeatStat" + V"FuncStat" + V"LocalStat" + V"LabelStat" +
          V"BreakStat" + V"GoToStat" + V"ExprStat";
@@ -383,7 +475,7 @@ local G = { V"Lua",
   Close = "]" * C(V"Equals") * "]";
   CloseEQ = Cmt(V"Close" * Cb("init"),
             function (s, i, a, b) return a == b end);
-  LongString = V"Open" * C((P(1) - V"CloseEQ")^0) * V"Close" /
+  LongString = V"Open" * C((P(1) - V"CloseEQ")^0) * expect(V"Close", "MisTermLStr") /
                function (s, o) return s end;
   Comment = P"--" * V"LongString" / function () return end +
             P"--" * (P(1) - P"\n")^0;
@@ -397,16 +489,16 @@ local G = { V"Lua",
   Reserved = V"Keywords" * -V"idRest";
   Identifier = V"idStart" * V"idRest"^0;
   Name = -V"Reserved" * C(V"Identifier") * -V"idRest";
-  Hex = (P("0x") + P("0X")) * xdigit^1;
-  Expo = S("eE") * S("+-")^-1 * digit^1;
+  Hex = (P("0x") + P("0X")) * expect(xdigit^1, "ExpDigitsHex");
+  Expo = S("eE") * S("+-")^-1 * expect(digit^1, "ExpDigitsExpo");
   Float = (((digit^1 * P(".") * digit^0) +
           (P(".") * digit^1)) * V"Expo"^-1) +
           (digit^1 * V"Expo");
   Int = digit^1;
   Number = C(V"Hex" + V"Float" + V"Int") /
            function (n) return tonumber(n) end;
-  ShortString = P'"' * C(((P'\\' * P(1)) + (P(1) - P'"'))^0) * P'"' +
-                P"'" * C(((P"\\" * P(1)) + (P(1) - P"'"))^0) * P"'";
+  ShortString = P'"' * C(((P'\\' * P(1)) + (P(1) - P'"'))^0) * expect(P'"', "MisTermDQuote") +
+                P"'" * C(((P"\\" * P(1)) + (P(1) - P"'"))^0) * expect(P"'", "MisTermSQuote");
   String = V"LongString" + (V"ShortString" / function (s) return fix_str(s) end);
   OrOp = kw("or") / "or";
   AndOp = kw("and") / "and";
