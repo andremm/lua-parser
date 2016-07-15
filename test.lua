@@ -1046,8 +1046,8 @@ e = [=[
 { `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "not", `Op{ "eq", `Op{ "eq", `Op{ "le", `Number "3", `Op{ "lt", `Number "1", `Number "2" } }, `Number "4" }, `Number "5" } }, `Number "6" }, `Number "7" } } } }
 ]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
 -- repeat
 

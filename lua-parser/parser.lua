@@ -267,7 +267,7 @@ local G = { V"Lua",
   Id = taggedCap("Id", token(V"Name", "Name"));
   FunctionDef = kw("function") * V"FuncBody";
   FieldSep = symb(",") + symb(";");
-  Field = taggedCap("Pair", (symb("[") * V"Expr" * expect(symb("]"), "MisCloseBracket") * expect(symb("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1")) +
+  Field = taggedCap("Pair", (symb("[" * -P(S"=[")) * V"Expr" * expect(symb("]"), "MisCloseBracket") * expect(symb("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1")) +
                     (taggedCap("String", token(V"Name", "Name")) * expect(symb("="), "ExpEqField2") * expect(V"Expr", "ExpExprField2"))) +
           V"Expr";
   FieldList = (V"Field" * (V"FieldSep" * V"Field")^0 * V"FieldSep"^-1)^-1;
@@ -303,7 +303,7 @@ local G = { V"Lua",
               V"SuffixedExp";
   SuffixedExp = Cf(V"PrimaryExp" * (
                   taggedCap("DotIndex", symb(".") * expect(taggedCap("String", token(V"Name", "Name")), "ExpNameDot")) +
-                  taggedCap("ArrayIndex", symb("[") * V"Expr" * expect(symb("]"), "MisCloseBracketIndex")) +
+                  taggedCap("ArrayIndex", symb("[" * -P(S"=[")) * V"Expr" * expect(symb("]"), "MisCloseBracketIndex")) +
                   taggedCap("Invoke", Cg(symb(":") * expect(taggedCap("String", token(V"Name", "Name")), "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs"))) +
                   taggedCap("Call", V"FuncArgs")
                 )^0, function (t1, t2)
@@ -464,7 +464,7 @@ local G = { V"Lua",
           symb("<") / "lt" +
           symb(">") / "gt";
   BOrOp = symb("|") / "bor";
-  BXorOp = symb("~") / "bxor";
+  BXorOp = symb("~" * -P"=") / "bxor";
   BAndOp = symb("&") / "band";
   ShiftOp = symb("<<") / "shl" +
             symb(">>") / "shr";
