@@ -1,5 +1,5 @@
 --[[
-This module implements a parser for Lua 5.2 with LPeg,
+This module implements a parser for Lua 5.3 with LPeg,
 and generates an Abstract Syntax Tree in the Metalua format.
 For more information about Metalua, please, visit:
 https://github.com/fab13n/metalua-parser
@@ -7,7 +7,7 @@ https://github.com/fab13n/metalua-parser
 block: { stat* }
 
 stat:
-  `Do{ stat* }
+    `Do{ stat* }
   | `Set{ {lhs+} {expr+} }                    -- lhs1, lhs2... = e1, e2...
   | `While{ expr block }                      -- while e do b end
   | `Repeat{ block expr }                     -- repeat b until e
@@ -23,7 +23,7 @@ stat:
   | apply
 
 expr:
-  `Nil
+    `Nil
   | `Dots
   | `True
   | `False
@@ -37,15 +37,19 @@ expr:
   | lhs
 
 apply:
-  `Call{ expr expr* }
+    `Call{ expr expr* }
   | `Invoke{ expr `String{ <string> } expr* }
 
 lhs: `Id{ <string> } | `Index{ expr expr }
 
-opid: 'add' | 'sub' | 'mul' | 'div' | 'idiv' | 'mod' | 'pow' | 'concat'
-  | 'band' | 'bor' | 'bxor' | 'shl' | 'shr' | 'eq' | 'lt' | 'le'
-  | 'and' | 'or' | 'not' | 'unm' | 'len' | 'bnot'
+opid:  -- includes additional operators from Lua 5.3
+    'add'  | 'sub' | 'mul'  | 'div'
+  | 'idiv' | 'mod' | 'pow'  | 'concat'
+  | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
+  | 'eq'   | 'lt'  | 'le'   | 'and' | 'or'
+  | 'unm'  | 'len' | 'bnot' | 'not'
 ]]
+
 local parser = {}
 
 local lpeg = require "lpeglabel"
