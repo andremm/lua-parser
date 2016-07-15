@@ -171,67 +171,18 @@ local function syntaxerror (errorinfo, pos, msg)
   return string.format(error_msg, errorinfo.filename, l, c, msg)
 end
 
--- gets the farthest failure position
-local function getffp (s, i, t)
-  return t.ffp or i, t
-end
-
--- gets the table that contains the error information
-local function geterrorinfo ()
-  return Cmt(Carg(1), getffp) * (C(V"OneWord") + Cc("EOF")) /
-  function (t, u)
-    t.unexpected = u
-    return t
-  end
-end
-
--- creates an errror message using the farthest failure position
-local function errormsg ()
-  return geterrorinfo() /
-  function (t)
-    local p = t.ffp or 1
-    local msg = "unexpected '%s', expecting %s"
-    msg = string.format(msg, t.unexpected, t.expected)
-    return nil, syntaxerror(t, p, msg)
-  end
-end
-
--- reports a syntactic error
-local function report_error ()
-  return errormsg()
-end
-
--- sets the farthest failure position and the expected tokens
-local function setffp (s, i, t, n)
-  if not t.ffp or i > t.ffp then
-    t.ffp = i
-    t.list = {} ; t.list[n] = n
-    t.expected = "'" .. n .. "'"
-  elseif i == t.ffp then
-    if not t.list[n] then
-      t.list[n] = n
-      t.expected = "'" .. n .. "', " .. t.expected
-    end
-  end
-  return false
-end
-
-local function updateffp (name)
-  return Cmt(Carg(1) * Cc(name), setffp)
-end
-
 -- regular combinators and auxiliary functions
 
-local function token (pat, name)
-  return pat * V"Skip" + updateffp(name) * P(false)
+local function token (pat)
+  return pat * V"Skip" + P(false)
 end
 
 local function symb (str)
-  return token (P(str), str)
+  return token (P(str))
 end
 
 local function kw (str)
-  return token (P(str) * -V"idRest", str)
+  return token (P(str) * -V"idRest")
 end
 
 local function taggedCap (tag, pat)
@@ -308,7 +259,7 @@ end
 -- grammar
 
 local G = { V"Lua",
-  Lua = V"Shebang"^-1 * V"Skip" * V"Chunk" * -1 + report_error();
+  Lua = V"Shebang"^-1 * V"Skip" * V"Chunk" * -1;
   -- parser
   Chunk = V"Block";
   StatList = (symb(";") + V"Stat")^0;
