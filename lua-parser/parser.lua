@@ -452,8 +452,8 @@ local G = { V"Lua",
   Int = digit^1;
   Number = C(V"Hex" + V"Float" + V"Int") /
            function (n) return tonumber(n) end;
-  ShortString = P'"' * C(((P'\\' * P(1)) + (P(1) - P'"'))^0) * expect(P'"', "MisTermDQuote") +
-                P"'" * C(((P"\\" * P(1)) + (P(1) - P"'"))^0) * expect(P"'", "MisTermSQuote");
+  ShortString = P'"' * C(((P'\\' * P(1)) + (P(1) - S'"\n'))^0) * expect(P'"', "MisTermDQuote") +
+                P"'" * C(((P"\\" * P(1)) + (P(1) - S"'\n"))^0) * expect(P"'", "MisTermSQuote");
   String = V"LongString" + (V"ShortString" / function (s) return fix_str(s) end);
   OrOp = kw("or") / "or";
   AndOp = kw("and") / "and";
