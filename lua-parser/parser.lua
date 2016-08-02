@@ -56,7 +56,7 @@ lpeg.locale(lpeg)
 
 local P, S, V = lpeg.P, lpeg.S, lpeg.V
 local C, Carg, Cb, Cc = lpeg.C, lpeg.Carg, lpeg.Cb, lpeg.Cc
-local Cf, Cg, Cmt, Cp, Ct = lpeg.Cf, lpeg.Cg, lpeg.Cmt, lpeg.Cp, lpeg.Ct
+local Cf, Cg, Cmt, Cp, Cs, Ct = lpeg.Cf, lpeg.Cg, lpeg.Cmt, lpeg.Cp, lpeg.Cs, lpeg.Ct
 local Lc, T = lpeg.Lc, lpeg.T
 
 local alpha, digit, alnum = lpeg.alpha, lpeg.digit, lpeg.alnum
@@ -212,22 +212,6 @@ end
 
 local function commaSep (patt, label)
   return sepBy(patt, sym(","), label)
-end
-
-local function fixEscSeq (str)
-  str = string.gsub(str, "\\a", "\a")
-  str = string.gsub(str, "\\b", "\b")
-  str = string.gsub(str, "\\f", "\f")
-  str = string.gsub(str, "\\n", "\n")
-  str = string.gsub(str, "\\r", "\r")
-  str = string.gsub(str, "\\t", "\t")
-  str = string.gsub(str, "\\v", "\v")
-  str = string.gsub(str, "\\\n", "\n")
-  str = string.gsub(str, "\\\r", "\n")
-  str = string.gsub(str, "\\'", "'")
-  str = string.gsub(str, '\\"', '"')
-  str = string.gsub(str, '\\\\', '\\')
-  return str
 end
 
 local function tagDo (block)
@@ -398,9 +382,33 @@ local G = { V"Lua",
   Int      = digit^1;
 
   String    = token(V"ShortStr" + V"LongStr");
-  ShortStr  = ( P'"' * C((P'\\'*P(1) + (P(1)-S'"\n'))^0) * expect(P'"', "MisTermDQuote")
-              + P"'" * C((P"\\"*P(1) + (P(1)-S"'\n"))^0) * expect(P"'", "MisTermSQuote")
-              ) / fixEscSeq;
+  ShortStr  = P'"' * Cs((V"EscSeq" + (P(1)-S'"\n'))^0) * expect(P'"', "MisTermDQuote")
+            + P"'" * Cs((V"EscSeq" + (P(1)-S"'\n"))^0) * expect(P"'", "MisTermSQuote");
+
+  EscSeq = P"\\" / ""  -- remove backslash
+         * ( P"a" / "\a"
+           + P"b" / "\b"
+           + P"f" / "\f"
+           + P"n" / "\n"
+           + P"r" / "\r"
+           + P"t" / "\t"
+           + P"v" / "\v"
+ 
+           + P"\n" / "\n"
+           + P"\r" / "\n"
+ 
+           + P"\\" / "\\"
+           + P"\"" / "\""
+           + P"\'" / "\'"
+
+           + P"z" * V"Space"  / ""
+
+           + digit * digit^-2 / tonumber / string.char
+           + P"x" * C(xdigit * xdigit) * Cc(16)       / tonumber / string.char
+           + P"u" * "{" * C(xdigit^1) * Cc(16) * "}"  / tonumber / string.char  -- true max is \u{10FFFF}
+
+           + T(63)  -- TODO add a proper error label for invalid sequences
+           );
 
   LongStr  = V"Open" * C((P(1) - V"CloseEq")^0) * expect(V"Close", "MisTermLStr") / function (s, eqs) return s end;
   Open     = "[" * Cg(V"Equals", "openEq") * "[" * P"\n"^-1;
