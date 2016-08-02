@@ -397,26 +397,26 @@ local G = { V"Lua",
 
   Name      = token(-V"Reserved" * C(V"Ident"));
   Reserved  = V"Keywords" * -V"IdRest";
-  Keywords  = P("and") + "break" + "do" + "elseif" + "else" + "end"
+  Keywords  = P"and" + "break" + "do" + "elseif" + "else" + "end"
             + "false" + "for" + "function" + "goto" + "if" + "in"
             + "local" + "nil" + "not" + "or" + "repeat" + "return"
             + "then" + "true" + "until" + "while";
   Ident     = V"IdStart" * V"IdRest"^0;
-  IdStart   = alpha + P("_");
-  IdRest    = alnum + P("_");
+  IdStart   = alpha + P"_";
+  IdRest    = alnum + P"_";
 
   Number   = token((V"Hex" + V"Float" + V"Int") / tonumber);
-  Hex      = (P"0x" + P"0X") * expect(xdigit^1, "ExpDigitsHex");
+  Hex      = (P"0x" + "0X") * expect(xdigit^1, "ExpDigitsHex");
   Float    = V"Decimal" * V"Expo"^-1
            + V"Int" * V"Expo";
   Decimal  = digit^1 * "." * digit^0
-           + P(".") * digit^1;
-  Expo     = S("eE") * S("+-")^-1 * expect(digit^1, "ExpDigitsExpo");
+           + P"." * digit^1;
+  Expo     = S"eE" * S"+-"^-1 * expect(digit^1, "ExpDigitsExpo");
   Int      = digit^1;
 
   String       = token(V"ShortString" + V"LongString");
-  ShortString  = ( P'"' * C(((P'\\' * P(1)) + (P(1) - S'"\n'))^0) * expect(P'"', "MisTermDQuote")
-                 + P"'" * C(((P"\\" * P(1)) + (P(1) - S"'\n"))^0) * expect(P"'", "MisTermSQuote")
+  ShortString  = ( P'"' * C((P'\\'*P(1) + (P(1)-S'"\n'))^0) * expect(P'"', "MisTermDQuote")
+                 + P"'" * C((P"\\"*P(1) + (P(1)-S"'\n"))^0) * expect(P"'", "MisTermSQuote")
                  ) / fix_esc_seq;
 
   LongString  = V"Open" * C((P(1) - V"CloseEq")^0) * expect(V"Close", "MisTermLStr") / function (s, eqs) return s end;
