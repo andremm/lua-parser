@@ -303,8 +303,8 @@ local G = { V"Lua",
   Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExpList", "ExpEListAssign"));
 
   FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "ExpFuncName") * V"FuncBody") / fixFuncStat;
-  FuncName    = Cf(V"Id" * (sym(".") * expect(tagC("String", V"Name"), "ExpNameFunc1"))^0, insertIndex)
-              * (sym(":") * expect(tagC("String", V"Name"), "ExpNameFunc2"))^-1 / markMethod;
+  FuncName    = Cf(V"Id" * (sym(".") * expect(V"StrId", "ExpNameFunc1"))^0, insertIndex)
+              * (sym(":") * expect(V"StrId", "ExpNameFunc2"))^-1 / markMethod;
   FuncBody    = tagC("Function", V"FuncParams" * V"Block" * expect(kw("end"), "ExpEndFunc"));
   FuncParams  = expect(sym("("), "ExpOpenParenParams") * V"ParList" * expect(sym(")"), "MisCloseParenParams");
   ParList     = V"NameList" * (sym(",") * tagC("Dots", sym("...")))^-1 / addDots
@@ -350,9 +350,9 @@ local G = { V"Lua",
 
   SuffixedExpr  = Cf(V"PrimaryExpr" * (V"Index" + V"Call")^0, makeIndexOrCall);
   PrimaryExpr   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExpExprParen") * expect(sym(")"), "MisCloseParenExpr"));
-  Index         = tagC("DotIndex", sym(".") * expect(tagC("String", V"Name"), "ExpNameDot"))
+  Index         = tagC("DotIndex", sym(".") * expect(V"StrId", "ExpNameDot"))
                 + tagC("ArrayIndex", sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracketIndex"));
-  Call          = tagC("Invoke", Cg(sym(":") * expect(tagC("String", V"Name"), "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs")))
+  Call          = tagC("Invoke", Cg(sym(":") * expect(V"StrId", "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs")))
                 + tagC("Call", V"FuncArgs");
 
   FuncDef   = kw("function") * V"FuncBody";
@@ -365,10 +365,11 @@ local G = { V"Lua",
   Field      = tagC("Pair", V"FieldKey" * expect(sym("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1"))
              + V"Expr";
   FieldKey   = sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracket")
-             + tagC("String", V"Name");
+             + V"StrId";
   FieldSep   = sym(",") + sym(";");
 
-  Id = tagC("Id", V"Name");
+  Id     = tagC("Id", V"Name");
+  StrId  = tagC("String", V"Name");
 
   -- lexer
   Skip     = (V"Space" + V"Comment")^0;
