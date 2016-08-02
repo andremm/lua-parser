@@ -188,32 +188,20 @@ end
 local function binaryop (e1, op, e2)
   if not op then
     return e1
-  elseif op == "add" or
-         op == "sub" or
-         op == "mul" or
-         op == "div" or
-         op == "idiv" or
-         op == "mod" or
-         op == "pow" or
-         op == "concat" or
-         op == "band" or
-         op == "bor" or
-         op == "bxor" or
-         op == "shl" or
-         op == "shr" or
-         op == "eq" or
-         op == "lt" or
-         op == "le" or
-         op == "and" or
-         op == "or" then
-    return { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
-  elseif op == "ne" then
-    return unaryop ("not", { tag = "Op", pos = e1.pos, [1] = "eq", [2] = e1, [3] = e2 })
-  elseif op == "gt" then
-    return { tag = "Op", pos = e1.pos, [1] = "lt", [2] = e2, [3] = e1 }
-  elseif op == "ge" then
-    return { tag = "Op", pos = e1.pos, [1] = "le", [2] = e2, [3] = e1 }
   end
+
+  local node = { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
+
+  if op == "ne" then
+    node[1] = "eq"
+    node = unaryop("not", node)
+  elseif op == "gt" then
+    node[1], node[2], node[3] = "lt", e2, e1
+  elseif op == "ge" then
+    node[1], node[2], node[3] = "le", e2, e1
+  end
+
+  return node
 end
 
 local function chainl1 (pat, sep, label)
@@ -338,8 +326,7 @@ local G = { V"Lua",
   SubExpr_5   = chainl1(V"SubExpr_6", V"BXorOp", "ExpExprSub5");
   SubExpr_6   = chainl1(V"SubExpr_7", V"BAndOp", "ExpExprSub6");
   SubExpr_7   = chainl1(V"SubExpr_8", V"ShiftOp", "ExpExprSub7");
-  SubExpr_8   = V"SubExpr_9" * V"ConOp" * expect(V"SubExpr_8", "ExpExprSub8") / binaryop
-              + V"SubExpr_9";
+  SubExpr_8   = V"SubExpr_9" * (V"ConOp" * expect(V"SubExpr_8", "ExpExprSub8"))^-1 / binaryop;
   SubExpr_9   = chainl1(V"SubExpr_10", V"AddOp", "ExpExprSub9");
   SubExpr_10  = chainl1(V"SubExpr_11", V"MulOp", "ExpExprSub10");
   SubExpr_11  = V"UnOp" * expect(V"SubExpr_11", "ExpExprSub11") / unaryop
