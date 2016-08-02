@@ -9,6 +9,13 @@ local new_function, end_function = scope.new_function, scope.end_function
 local begin_loop, end_loop = scope.begin_loop, scope.end_loop
 local insideloop = scope.insideloop
 
+-- creates an error message for the input string
+local function syntaxerror (errorinfo, pos, msg)
+  local l, c = lineno(errorinfo.subject, pos)
+  local error_msg = "%s:%d:%d: syntax error, %s"
+  return string.format(error_msg, errorinfo.filename, l, c, msg)
+end
+
 local function exist_label (env, scope, stm)
   local l = stm[1]
   for s=scope, 0, -1 do

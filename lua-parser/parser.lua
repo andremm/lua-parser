@@ -156,12 +156,6 @@ local function expect(patt, label)
   error("Label not found: " .. label)
 end
 
--- creates an error message for the input string
-local function syntaxerror (errorinfo, pos, msg)
-  local l, c = lineno(errorinfo.subject, pos)
-  local error_msg = "%s:%d:%d: syntax error, %s"
-  return string.format(error_msg, errorinfo.filename, l, c, msg)
-end
 
 -- regular combinators and auxiliary functions
 
@@ -177,15 +171,15 @@ local function kw (str)
   return token(P(str) * -V"IdRest")
 end
 
-local function taggedCap (tag, pat)
+local function tagC (tag, pat)
   return Ct(Cg(Cp(), "pos") * Cg(Cc(tag), "tag") * pat)
 end
 
-local function unaryop (op, e)
+local function unaryOp (op, e)
   return { tag = "Op", pos = e.pos, [1] = op, [2] = e }
 end
 
-local function binaryop (e1, op, e2)
+local function binaryOp (e1, op, e2)
   if not op then
     return e1
   end
@@ -194,7 +188,7 @@ local function binaryop (e1, op, e2)
 
   if op == "ne" then
     node[1] = "eq"
-    node = unaryop("not", node)
+    node = unaryOp("not", node)
   elseif op == "gt" then
     node[1], node[2], node[3] = "lt", e2, e1
   elseif op == "ge" then
@@ -204,15 +198,23 @@ local function binaryop (e1, op, e2)
   return node
 end
 
-local function chainl1 (pat, sep, label)
-  return Cf(pat * Cg(sep * expect(pat, label))^0, binaryop)
+local function sepBy (pat, sep, label)
+  if label then
+    return pat * Cg(sep * expect(pat, label))^0
+  else
+    return pat * Cg(sep * pat)^0
+  end
 end
 
-local function sepby1 (pat, sep, tag)
-  return taggedCap(tag, pat * (sep * pat)^0)
+local function chainOp (pat, sep, label)
+  return Cf(sepBy(pat, sep, label), binaryOp)
 end
 
-local function fix_esc_seq (str)
+local function commaSep (pat, label)
+  return sepBy(pat, sym(","), label)
+end
+
+local function fixEscSeq (str)
   str = string.gsub(str, "\\a", "\a")
   str = string.gsub(str, "\\b", "\b")
   str = string.gsub(str, "\\f", "\f")
@@ -228,43 +230,43 @@ local function fix_esc_seq (str)
   return str
 end
 
-local function tag_as_do (block)
+local function tagDo (block)
   block.tag = "Do"
   return block
 end
 
-local function fix_func_stat (func)
-  if func[1].is_method then table.insert(func[2][1], 1, {tag = "Id", [1] = "self"}) end
+local function fixFuncStat (func)
+  if func[1].is_method then table.insert(func[2][1], 1, { tag = "Id", [1] = "self" }) end
   func[1] = {func[1]}
   func[2] = {func[2]}
   return func
 end
 
-local function add_dots (params, dots)
+local function addDots (params, dots)
   if dots then table.insert(params, dots) end
   return params
 end
 
-local function insert_index (t, index)
-  return {tag = "Index", pos = t.pos, [1] = t, [2] = index}
+local function insertIndex (t, index)
+  return { tag = "Index", pos = t.pos, [1] = t, [2] = index }
 end
 
-local function mark_method(t, method)
+local function markMethod(t, method)
   if method then
-    return {tag = "Index", pos = t.pos, is_method = true, [1] = t, [2] = method}
+    return { tag = "Index", pos = t.pos, is_method = true, [1] = t, [2] = method }
   end
   return t
 end
 
-local function make_index_or_call (t1, t2)
+local function makeIndexOrCall (t1, t2)
   if t2.tag == "Call" or t2.tag == "Invoke" then
-    local t = {tag = t2.tag, pos = t1.pos, [1] = t1}
+    local t = { tag = t2.tag, pos = t1.pos, [1] = t1 }
     for k, v in ipairs(t2) do
       table.insert(t, v)
     end
     return t
   end
-  return {tag = "Index", pos = t1.pos, [1] = t1, [2] = t2[1]}
+  return { tag = "Index", pos = t1.pos, [1] = t1, [2] = t2[1] }
 end
 
 -- grammar
@@ -273,72 +275,72 @@ local G = { V"Lua",
   Shebang  = P"#" * (P(1) - P"\n")^0 * P"\n";
 
   Chunk  = V"Block";
-  Block  = taggedCap("Block", V"Stat"^0 * V"RetStat"^-1);
+  Block  = tagC("Block", V"Stat"^0 * V"RetStat"^-1);
   Stat   = V"IfStat" + V"DoStat" + V"WhileStat" + V"RepeatStat" + V"ForStat" 
          + V"LocalStat" + V"FuncStat" + V"BreakStat" + V"LabelStat" + V"GoToStat"
          + V"FuncCall" + V"Assignment" + sym(";");
 
-  IfStat      = taggedCap("If", V"IfPart" * V"ElseIfPart"^0 * V"ElsePart"^-1 * expect(kw("end"), "ExpEndIf"));
+  IfStat      = tagC("If", V"IfPart" * V"ElseIfPart"^0 * V"ElsePart"^-1 * expect(kw("end"), "ExpEndIf"));
   IfPart      = kw("if") * expect(V"Expr", "ExpExprIf") * expect(kw("then"), "ExpThenIf") * V"Block";
   ElseIfPart  = kw("elseif") * expect(V"Expr", "ExpExprEIf") * expect(kw("then"), "ExpThenEIf") * V"Block";
   ElsePart    = kw("else") * V"Block";
 
-  DoStat      = kw("do") * V"Block" * expect(kw("end"), "ExpEndDo") / tag_as_do;
-  WhileStat   = taggedCap("While", kw("while") * expect(V"Expr", "ExpExprWhile") * V"WhileBody");
+  DoStat      = kw("do") * V"Block" * expect(kw("end"), "ExpEndDo") / tagDo;
+  WhileStat   = tagC("While", kw("while") * expect(V"Expr", "ExpExprWhile") * V"WhileBody");
   WhileBody   = expect(kw("do"), "ExpDoWhile") * V"Block" * expect(kw("end"), "ExpEndWhile");
-  RepeatStat  = taggedCap("Repeat", kw("repeat") * V"Block" * expect(kw("until"), "ExpUntilRep") * expect(V"Expr", "ExpExprRep"));
+  RepeatStat  = tagC("Repeat", kw("repeat") * V"Block" * expect(kw("until"), "ExpUntilRep") * expect(V"Expr", "ExpExprRep"));
 
   ForStat   = kw("for") * expect(V"ForNum" + V"ForGen", "ExpForRange") * expect(kw("end"), "ExpEndFor");
-  ForNum    = taggedCap("Fornum", V"Id" * sym("=") * V"ForRange" * V"ForBody");
+  ForNum    = tagC("Fornum", V"Id" * sym("=") * V"ForRange" * V"ForBody");
   ForRange  = expect(V"Expr", "ExpExprFor1") * expect(sym(","), "ExpCommaFor") *expect(V"Expr", "ExpExprFor2")
             * (sym(",") * expect(V"Expr", "ExpExprFor3"))^-1; 
-  ForGen    = taggedCap("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExpList", "ExpEListFor") * V"ForBody");
+  ForGen    = tagC("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExpList", "ExpEListFor") * V"ForBody");
   ForBody   = expect(kw("do"), "ExpDoFor") * V"Block";
 
   LocalStat    = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "ExpDefLocal");
-  LocalFunc    = taggedCap("Localrec", kw("function") * expect(V"Id", "ExpNameLFunc") * V"FuncBody") / fix_func_stat;
-  LocalAssign  = taggedCap("Local", V"NameList" * (sym("=") * expect(V"ExpList", "ExpEListLAssign") + Ct(Cc())));
-  Assignment   = taggedCap("Set", V"VarList" * sym("=") * expect(V"ExpList", "ExpEListAssign"));
+  LocalFunc    = tagC("Localrec", kw("function") * expect(V"Id", "ExpNameLFunc") * V"FuncBody") / fixFuncStat;
+  LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExpList", "ExpEListLAssign") + Ct(Cc())));
+  Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExpList", "ExpEListAssign"));
 
-  FuncStat    = taggedCap("Set", kw("function") * expect(V"FuncName", "ExpFuncName") * V"FuncBody") / fix_func_stat;
-  FuncName    = Cf(V"Id" * (sym(".") * expect(taggedCap("String", V"Name"), "ExpNameFunc1"))^0, insert_index)
-              * (sym(":") * expect(taggedCap("String", V"Name"), "ExpNameFunc2"))^-1 / mark_method;
-  FuncBody    = taggedCap("Function", V"FuncParams" * V"Block" * expect(kw("end"), "ExpEndFunc"));
+  FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "ExpFuncName") * V"FuncBody") / fixFuncStat;
+  FuncName    = Cf(V"Id" * (sym(".") * expect(tagC("String", V"Name"), "ExpNameFunc1"))^0, insertIndex)
+              * (sym(":") * expect(tagC("String", V"Name"), "ExpNameFunc2"))^-1 / markMethod;
+  FuncBody    = tagC("Function", V"FuncParams" * V"Block" * expect(kw("end"), "ExpEndFunc"));
   FuncParams  = expect(sym("("), "ExpOpenParenParams") * V"ParList" * expect(sym(")"), "MisCloseParenParams");
-  ParList     = V"NameList" * (sym(",") * taggedCap("Dots", sym("...")))^-1 / add_dots
-              + Ct(taggedCap("Dots", sym("...")))
+  ParList     = V"NameList" * (sym(",") * tagC("Dots", sym("...")))^-1 / addDots
+              + Ct(tagC("Dots", sym("...")))
               + Ct(Cc()); -- Cc({}) generates a bug since the {} would be shared across parses
 
-  LabelStat  = taggedCap("Label", sym("::") * expect(V"Name", "ExpLabelName") * expect(sym("::"), "MisCloseLabel"));
-  GoToStat   = taggedCap("Goto", kw("goto") * expect(V"Name", "ExpLabel"));
-  BreakStat  = taggedCap("Break", kw("break"));
-  RetStat    = taggedCap("Return", kw("return") * (V"Expr" * (sym(",") * expect(V"Expr", "ExpExprCommaRet"))^0)^-1 * sym(";")^-1);
+  LabelStat  = tagC("Label", sym("::") * expect(V"Name", "ExpLabelName") * expect(sym("::"), "MisCloseLabel"));
+  GoToStat   = tagC("Goto", kw("goto") * expect(V"Name", "ExpLabel"));
+  BreakStat  = tagC("Break", kw("break"));
+  RetStat    = tagC("Return", kw("return") * commaSep(V"Expr", "ExpExprCommaRet")^-1 * sym(";")^-1);
 
-  NameList = sepby1(V"Id", sym(","), "NameList");
-  VarList  = sepby1(V"VarExp", sym(","), "VarList");
-  ExpList  = sepby1(V"Expr", sym(","), "ExpList");
+  NameList = tagC("NameList", commaSep(V"Id"));
+  VarList  = tagC("VarList", commaSep(V"VarExp"));
+  ExpList  = tagC("ExpList", commaSep(V"Expr"));
 
   Expr        = V"SubExpr_1";
-  SubExpr_1   = chainl1(V"SubExpr_2", V"OrOp", "ExpExprSub1");
-  SubExpr_2   = chainl1(V"SubExpr_3", V"AndOp", "ExpExprSub2");
-  SubExpr_3   = chainl1(V"SubExpr_4", V"RelOp", "ExpExprSub3");
-  SubExpr_4   = chainl1(V"SubExpr_5", V"BOrOp", "ExpExprSub4");
-  SubExpr_5   = chainl1(V"SubExpr_6", V"BXorOp", "ExpExprSub5");
-  SubExpr_6   = chainl1(V"SubExpr_7", V"BAndOp", "ExpExprSub6");
-  SubExpr_7   = chainl1(V"SubExpr_8", V"ShiftOp", "ExpExprSub7");
-  SubExpr_8   = V"SubExpr_9" * (V"ConOp" * expect(V"SubExpr_8", "ExpExprSub8"))^-1 / binaryop;
-  SubExpr_9   = chainl1(V"SubExpr_10", V"AddOp", "ExpExprSub9");
-  SubExpr_10  = chainl1(V"SubExpr_11", V"MulOp", "ExpExprSub10");
-  SubExpr_11  = V"UnOp" * expect(V"SubExpr_11", "ExpExprSub11") / unaryop
+  SubExpr_1   = chainOp(V"SubExpr_2", V"OrOp", "ExpExprSub1");
+  SubExpr_2   = chainOp(V"SubExpr_3", V"AndOp", "ExpExprSub2");
+  SubExpr_3   = chainOp(V"SubExpr_4", V"RelOp", "ExpExprSub3");
+  SubExpr_4   = chainOp(V"SubExpr_5", V"BOrOp", "ExpExprSub4");
+  SubExpr_5   = chainOp(V"SubExpr_6", V"BXorOp", "ExpExprSub5");
+  SubExpr_6   = chainOp(V"SubExpr_7", V"BAndOp", "ExpExprSub6");
+  SubExpr_7   = chainOp(V"SubExpr_8", V"ShiftOp", "ExpExprSub7");
+  SubExpr_8   = V"SubExpr_9" * (V"ConOp" * expect(V"SubExpr_8", "ExpExprSub8"))^-1 / binaryOp;
+  SubExpr_9   = chainOp(V"SubExpr_10", V"AddOp", "ExpExprSub9");
+  SubExpr_10  = chainOp(V"SubExpr_11", V"MulOp", "ExpExprSub10");
+  SubExpr_11  = V"UnOp" * expect(V"SubExpr_11", "ExpExprSub11") / unaryOp
               + V"SubExpr_12";
-  SubExpr_12  = V"SimpleExp" * (V"PowOp" * expect(V"SubExpr_11", "ExpExprSub12"))^-1 / binaryop;
+  SubExpr_12  = V"SimpleExp" * (V"PowOp" * expect(V"SubExpr_11", "ExpExprSub12"))^-1 / binaryOp;
   
-  SimpleExp = taggedCap("Number", V"Number")
-            + taggedCap("String", V"String")
-            + taggedCap("Nil", kw("nil"))
-            + taggedCap("False", kw("false"))
-            + taggedCap("True", kw("true"))
-            + taggedCap("Dots", sym("..."))
+  SimpleExp = tagC("Number", V"Number")
+            + tagC("String", V"String")
+            + tagC("Nil", kw("nil"))
+            + tagC("False", kw("false"))
+            + tagC("True", kw("true"))
+            + tagC("Dots", sym("..."))
             + V"FunctionDef"
             + V"Constructor"
             + V"SuffixedExp";
@@ -346,27 +348,27 @@ local G = { V"Lua",
   FuncCall  = Cmt(V"SuffixedExp", function(s, i, exp) return exp.tag == "Call" or exp.tag == "Invoke", exp end);
   VarExp    = Cmt(V"SuffixedExp", function(s, i, exp) return exp.tag == "Id" or exp.tag == "Index", exp end);
 
-  SuffixedExp  = Cf(V"PrimaryExp" * (V"Index" + V"Call")^0, make_index_or_call);
-  PrimaryExp   = V"Id" + taggedCap("Paren", sym("(") * expect(V"Expr", "ExpExprParen") * expect(sym(")"), "MisCloseParenExpr"));
-  Index        = taggedCap("DotIndex", sym(".") * expect(taggedCap("String", V"Name"), "ExpNameDot"))
-               + taggedCap("ArrayIndex", sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracketIndex"));
-  Call         = taggedCap("Invoke", Cg(sym(":") * expect(taggedCap("String", V"Name"), "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs")))
-               + taggedCap("Call", V"FuncArgs");
+  SuffixedExp  = Cf(V"PrimaryExp" * (V"Index" + V"Call")^0, makeIndexOrCall);
+  PrimaryExp   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExpExprParen") * expect(sym(")"), "MisCloseParenExpr"));
+  Index        = tagC("DotIndex", sym(".") * expect(tagC("String", V"Name"), "ExpNameDot"))
+               + tagC("ArrayIndex", sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracketIndex"));
+  Call         = tagC("Invoke", Cg(sym(":") * expect(tagC("String", V"Name"), "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs")))
+               + tagC("Call", V"FuncArgs");
 
   FunctionDef  = kw("function") * V"FuncBody";
-  FuncArgs     = sym("(") * (V"Expr" * (sym(",") * V"Expr")^0)^-1 * sym(")")
+  FuncArgs     = sym("(") * commaSep(V"Expr")^-1 * sym(")")
                + V"Constructor"
-               + taggedCap("String", V"String");
+               + tagC("String", V"String");
 
-  Constructor  = taggedCap("Table", sym("{") * V"FieldList" * expect(sym("}"), "MisCloseBrace"));
-  FieldList    = (V"Field" * (V"FieldSep" * V"Field")^0 * V"FieldSep"^-1)^-1;
-  Field        = taggedCap("Pair", V"FieldKey" * expect(sym("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1"))
+  Constructor  = tagC("Table", sym("{") * V"FieldList"^-1 * expect(sym("}"), "MisCloseBrace"));
+  FieldList    = sepBy(V"Field", V"FieldSep") * V"FieldSep"^-1;
+  Field        = tagC("Pair", V"FieldKey" * expect(sym("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1"))
                + V"Expr";
   FieldKey     = sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracket")
-               + taggedCap("String", V"Name");
+               + tagC("String", V"Name");
   FieldSep     = sym(",") + sym(";");
 
-  Id = taggedCap("Id", V"Name");
+  Id = tagC("Id", V"Name");
 
   -- lexer
   Skip     = (V"Space" + V"Comment")^0;
@@ -396,7 +398,7 @@ local G = { V"Lua",
   String       = token(V"ShortString" + V"LongString");
   ShortString  = ( P'"' * C((P'\\'*P(1) + (P(1)-S'"\n'))^0) * expect(P'"', "MisTermDQuote")
                  + P"'" * C((P"\\"*P(1) + (P(1)-S"'\n"))^0) * expect(P"'", "MisTermSQuote")
-                 ) / fix_esc_seq;
+                 ) / fixEscSeq;
 
   LongString  = V"Open" * C((P(1) - V"CloseEq")^0) * expect(V"Close", "MisTermLStr") / function (s, eqs) return s end;
   Open        = "[" * Cg(V"Equals", "openEq") * "[" * P"\n"^-1;
