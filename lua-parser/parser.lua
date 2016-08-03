@@ -255,12 +255,11 @@ end
 
 -- grammar
 local G = { V"Lua",
-  Lua      = V"Shebang"^-1 * V"Skip" * V"Chunk" * -1;
+  Lua      = V"Shebang"^-1 * V"Skip" * V"Block" * -1;
   Shebang  = P"#" * (P(1) - P"\n")^0 * P"\n";
 
-  Chunk       = V"Block";
   Block       = tagC("Block", V"Stat"^1 * V"RetStat"^-1 + V"RetStat" + V"EmptyBlock");
-  EmptyBlock  = #(P"end" + "elseif" + "else" + "until" + P(-1));
+  EmptyBlock  = #(P"end" + "elseif" + "else" + "until" + -1);
   Stat        = V"IfStat" + V"DoStat" + V"WhileStat" + V"RepeatStat" + V"ForStat"
               + V"LocalStat" + V"FuncStat" + V"BreakStat" + V"LabelStat" + V"GoToStat"
               + V"FuncCall" + V"Assignment" + sym(";");
@@ -276,8 +275,8 @@ local G = { V"Lua",
   RepeatStat  = tagC("Repeat", kw("repeat") * V"Block" * expect(kw("until"), "ExpUntilRep") * expect(V"Expr", "ExpExprRep"));
 
   ForStat   = kw("for") * expect(V"ForNum" + V"ForIn", "ExpForRange") * expect(kw("end"), "ExpEndFor");
-  ForNum    = tagC("Fornum", V"Id" * sym("=") * V"ForRange" * V"ForBody");
-  ForRange  = expect(V"Expr", "ExpExprFor1") * expect(sym(","), "ExpCommaFor") *expect(V"Expr", "ExpExprFor2")
+  ForNum    = tagC("Fornum", V"Id" * sym("=") * V"NumRange" * V"ForBody");
+  NumRange  = expect(V"Expr", "ExpExprFor1") * expect(sym(","), "ExpCommaFor") *expect(V"Expr", "ExpExprFor2")
             * (sym(",") * expect(V"Expr", "ExpExprFor3"))^-1;
   ForIn     = tagC("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExpList", "ExpEListFor") * V"ForBody");
   ForBody   = expect(kw("do"), "ExpDoFor") * V"Block";
@@ -301,24 +300,24 @@ local G = { V"Lua",
   BreakStat  = tagC("Break", kw("break"));
   RetStat    = tagC("Return", kw("return") * commaSep(V"Expr", "ExpExprCommaRet")^-1 * sym(";")^-1);
 
-  NameList = tagC("NameList", commaSep(V"Id"));
-  VarList  = tagC("VarList", commaSep(V"VarExpr"));
-  ExpList  = tagC("ExpList", commaSep(V"Expr"));
+  NameList  = tagC("NameList", commaSep(V"Id"));
+  VarList   = tagC("VarList", commaSep(V"VarExpr"));
+  ExpList   = tagC("ExpList", commaSep(V"Expr"));
 
-  Expr       = V"OrExpr";
-  OrExpr     = chainOp(V"AndExpr", V"OrOp", "ExpExprSub1");
-  AndExpr    = chainOp(V"RelExpr", V"AndOp", "ExpExprSub2");
-  RelExpr    = chainOp(V"BOrExpr", V"RelOp", "ExpExprSub3");
-  BOrExpr    = chainOp(V"BXorExpr", V"BOrOp", "ExpExprSub4");
-  BXorExpr   = chainOp(V"BAndExpr", V"BXorOp", "ExpExprSub5");
-  BAndExpr   = chainOp(V"ShiftExpr", V"BAndOp", "ExpExprSub6");
-  ShiftExpr  = chainOp(V"ConExpr", V"ShiftOp", "ExpExprSub7");
-  ConExpr    = V"AddExpr" * (V"ConOp" * expect(V"ConExpr", "ExpExprSub8"))^-1 / binaryOp;
-  AddExpr    = chainOp(V"MulExpr", V"AddOp", "ExpExprSub9");
-  MulExpr    = chainOp(V"UnaryExpr", V"MulOp", "ExpExprSub10");
-  UnaryExpr  = V"UnOp" * expect(V"UnaryExpr", "ExpExprSub11") / unaryOp
-             + V"PowerExpr";
-  PowerExpr  = V"SimpleExpr" * (V"PowOp" * expect(V"UnaryExpr", "ExpExprSub12"))^-1 / binaryOp;
+  Expr        = V"OrExpr";
+  OrExpr      = chainOp(V"AndExpr", V"OrOp", "ExpExprSub1");
+  AndExpr     = chainOp(V"RelExpr", V"AndOp", "ExpExprSub2");
+  RelExpr     = chainOp(V"BOrExpr", V"RelOp", "ExpExprSub3");
+  BOrExpr     = chainOp(V"BXorExpr", V"BOrOp", "ExpExprSub4");
+  BXorExpr    = chainOp(V"BAndExpr", V"BXorOp", "ExpExprSub5");
+  BAndExpr    = chainOp(V"ShiftExpr", V"BAndOp", "ExpExprSub6");
+  ShiftExpr   = chainOp(V"ConcatExpr", V"ShiftOp", "ExpExprSub7");
+  ConcatExpr  = V"AddExpr" * (V"ConcatOp" * expect(V"ConcatExpr", "ExpExprSub8"))^-1 / binaryOp;
+  AddExpr     = chainOp(V"MulExpr", V"AddOp", "ExpExprSub9");
+  MulExpr     = chainOp(V"UnaryExpr", V"MulOp", "ExpExprSub10");
+  UnaryExpr   = V"UnaryOp" * expect(V"UnaryExpr", "ExpExprSub11") / unaryOp
+              + V"PowExpr";
+  PowExpr     = V"SimpleExpr" * (V"PowOp" * expect(V"UnaryExpr", "ExpExprSub12"))^-1 / binaryOp;
 
   SimpleExpr = tagC("Number", V"Number")
              + tagC("String", V"String")
@@ -377,7 +376,7 @@ local G = { V"Lua",
   Float    = V"Decimal" * V"Expo"^-1
            + V"Int" * V"Expo";
   Decimal  = digit^1 * "." * digit^0
-           + P"." * digit^1;
+           + P"." * -P"." * digit^1;
   Expo     = S"eE" * S"+-"^-1 * expect(digit^1, "ExpDigitsExpo");
   Int      = digit^1;
 
@@ -401,7 +400,7 @@ local G = { V"Lua",
            + P"\"" / "\""
            + P"\'" / "\'"
 
-           + P"z" * V"Space"  / ""
+           + P"z" * space^0  / ""
 
            + digit * digit^-2 / tonumber / string.char
            + P"x" * C(xdigit * xdigit) * Cc(16)       / tonumber / string.char
@@ -416,31 +415,31 @@ local G = { V"Lua",
   Equals   = P"="^0;
   CloseEq  = Cmt(V"Close" * Cb("openEq"), function (s, i, closeEq, openEq) return #openEq == #closeEq end);
 
-  OrOp     = kw("or")   / "or";
-  AndOp    = kw("and")  / "and";
-  RelOp    = sym("~=")  / "ne"
-           + sym("==")  / "eq"
-           + sym("<=")  / "le"
-           + sym(">=")  / "ge"
-           + sym("<")   / "lt"
-           + sym(">")   / "gt";
-  BOrOp    = sym("|")   / "bor";
-  BXorOp   = sym("~" * -P"=") / "bxor";
-  BAndOp   = sym("&")   / "band";
-  ShiftOp  = sym("<<")  / "shl"
-           + sym(">>")  / "shr";
-  ConOp    = sym("..")  / "concat";
-  AddOp    = sym("+")   / "add"
-           + sym("-")   / "sub";
-  MulOp    = sym("*")   / "mul"
-           + sym("//")  / "idiv"
-           + sym("/")   / "div"
-           + sym("%")   / "mod";
-  UnOp     = kw("not")  / "not"
-           + sym("-")   / "unm"
-           + sym("#")   / "len"
-           + sym("~")   / "bnot";
-  PowOp    = sym("^")   / "pow";
+  OrOp      = kw("or")   / "or";
+  AndOp     = kw("and")  / "and";
+  RelOp     = sym("~=")  / "ne"
+            + sym("==")  / "eq"
+            + sym("<=")  / "le"
+            + sym(">=")  / "ge"
+            + sym("<")   / "lt"
+            + sym(">")   / "gt";
+  BOrOp     = sym("|")   / "bor";
+  BXorOp    = sym("~" * -P"=") / "bxor";
+  BAndOp    = sym("&")   / "band";
+  ShiftOp   = sym("<<")  / "shl"
+            + sym(">>")  / "shr";
+  ConcatOp  = sym("..")  / "concat";
+  AddOp     = sym("+")   / "add"
+            + sym("-")   / "sub";
+  MulOp     = sym("*")   / "mul"
+            + sym("//")  / "idiv"
+            + sym("/")   / "div"
+            + sym("%")   / "mod";
+  UnaryOp   = kw("not")  / "not"
+            + sym("-")   / "unm"
+            + sym("#")   / "len"
+            + sym("~")   / "bnot";
+  PowOp     = sym("^")   / "pow";
 }
 
 local parser = {}
