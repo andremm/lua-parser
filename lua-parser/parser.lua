@@ -256,7 +256,7 @@ end
 -- grammar
 local G = { V"Lua",
   Lua      = V"Shebang"^-1 * V"Skip" * V"Block" * -1;
-  Shebang  = P"#" * (P(1) - P"\n")^0 * P"\n";
+  Shebang  = P"#!" * (P(1) - P"\n")^0;
 
   Block       = tagC("Block", V"Stat"^1 * V"RetStat"^-1 + V"RetStat" + V"EmptyBlock");
   EmptyBlock  = #(P"end" + "elseif" + "else" + "until" + -1);
