@@ -476,7 +476,7 @@ function parser.parse (subject, filename)
   lpeg.setmaxstack(1000)
   local ast, label, sfail = lpeg.match(G, subject, nil, errorinfo)
   if not ast then
-    local errpos = #subject-#sfail
+    local errpos = #subject-#sfail+1
     local errmsg = labels[label][2]
     return ast, syntaxerror(errorinfo, errpos, errmsg)
   end

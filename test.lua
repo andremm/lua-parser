@@ -299,136 +299,136 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
--- -- syntax error
+-- syntax error
 
--- if not metalua then
+if not metalua then
 
--- -- floating points
+-- floating points
 
--- s = [=[
--- f = 9e
--- ]=]
--- e = [=[
--- test.lua:2:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
--- ]=]
+s = [=[
+f = 9e
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected one or more digits for the exponent
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- s = [=[
--- f = 5.e
--- ]=]
--- e = [=[
--- test.lua:2:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
--- ]=]
+s = [=[
+f = 5.e
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected one or more digits for the exponent
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- s = [=[
--- f = .9e-
--- ]=]
--- e = [=[
--- test.lua:1:8: syntax error, unexpected '-', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
--- ]=]
+s = [=[
+f = .9e-
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected one or more digits for the exponent
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- s = [=[
--- f = 5.9e+
--- ]=]
--- e = [=[
--- test.lua:1:9: syntax error, unexpected '+', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
--- ]=]
+s = [=[
+f = 5.9e+
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected one or more digits for the exponent
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- -- integers
+-- integers
 
--- s = [=[
--- -- invalid hexadecimal number
+s = [=[
+-- invalid hexadecimal number
 
--- hex = 0xG
--- ]=]
--- e = [=[
--- test.lua:4:1: syntax error, unexpected 'EOF', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
--- ]=]
+hex = 0xG
+]=]
+e = [=[
+test.lua:3:9: syntax error, expected one or more hexadecimal digits after '0x'
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- -- long strings
+-- long strings
 
--- s = [=[
--- --[==[
--- testing long string3 begin
--- ]==]
+s = [=[
+--[==[
+testing long string3 begin
+]==]
 
--- ls3 = [===[
--- testing
--- unfinised
--- long string
--- ]==]
+ls3 = [===[
+testing
+unfinised
+long string
+]==]
 
--- --[==[
--- [[ testing long string3 end ]]
--- ]==]
--- ]=]
--- e = [=[
--- test.lua:5:7: syntax error, unexpected '[', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
--- ]=]
+--[==[
+[[ testing long string3 end ]]
+]==]
+]=]
+e = [=[
+test.lua:14:1: syntax error, unclosed long string
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- -- short strings
+-- short strings
 
--- s = [=[
--- -- short string test begin
+s = [=[
+-- short string test begin
 
--- ss6 = "testing unfinished string
+ss6 = "testing unfinished string
 
--- -- short string test end
--- ]=]
--- e = [=[
--- test.lua:3:7: syntax error, unexpected '"', expecting '(', 'Name', '{', 'function', '...', 'true', 'false', 'nil', 'String', 'Number', '~', '#', '-', 'not'
--- ]=]
+-- short string test end
+]=]
+e = [=[
+test.lua:4:1: syntax error, unclosed string
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- s = [=[
--- -- short string test begin
+s = [=[
+-- short string test begin
 
--- ss7 = 'testing \\
--- unfinished \\
--- string'
+ss7 = 'testing \\
+unfinished \\
+string'
 
--- -- short string test end
--- ]=]
--- e = [=[
--- ]=]
+-- short string test end
+]=]
+e = [=[
+]=]
 
--- r = parse(s)
--- --assert(r == e)
+r = parse(s)
+--assert(r == e)
 
--- -- unfinished comments
+-- unfinished comments
 
--- s = [=[
--- --[[ testing
--- unfinished
--- comment
--- ]=]
--- e = [=[
--- test.lua:3:1: syntax error, unexpected 'comment', expecting '=', ',', 'String', '{', '(', ':', '[', '.'
--- ]=]
+s = [=[
+--[[ testing
+unfinished
+comment
+]=]
+e = [=[
+test.lua:4:1: syntax error, unclosed long string
+]=]
 
--- r = parse(s)
--- assert(r == e)
+r = parse(s)
+assert(r == e)
 
--- end
+end
 
 print("> testing parser...")
 
