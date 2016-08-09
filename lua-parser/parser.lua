@@ -67,93 +67,113 @@ local space = lpeg.space
 -- error message auxiliary functions
 
 local labels = {
-  { "ExpExprIf", "expected a condition after 'if'" },
-  { "ExpThenIf", "expected 'then' after the condition" },
-  { "ExpExprEIf", "expected a condition after 'elseif'" },
-  { "ExpThenEIf", "expected 'then' after the condition" },
-  { "ExpEndIf", "expected 'end' to close the if statement" },
-  { "ExpEndDo", "expected 'end' to close the do block" },
-  { "ExpExprWhile", "expected a condition after 'while'" },
-  { "ExpDoWhile", "expected 'do' after the condition" },
-  { "ExpEndWhile", "expected 'end' to close the while loop" },
-  { "ExpUntilRep", "expected 'until' after the condition" },
-  { "ExpExprRep", "expected a condition after 'until'" },
+  { "ErrExtra", "unexpected character(s)" },
+  { "ErrInvalidStat", "invalid statement" },
 
-  { "ExpForRange", "expected a numeric or generic range after 'for'" },
-  { "ExpEndFor", "expected 'end' to close the for loop" },
-  { "ExpExprFor1", "expected a starting expression for the numeric range " },
-  { "ExpCommaFor", "expected a comma to split the start and end of the range" },
-  { "ExpExprFor2", "expected an ending expression for the numeric range" },
-  { "ExpExprFor3", "expected a step expression for the numeric range after the comma" },
-  { "ExpInFor", "expected 'in' after the variable names" },
-  { "ExpEListFor", "expected one or more expressions after 'in'" },
-  { "ExpDoFor", "expected 'do' after the range of the for loop" },
+  { "ErrEndIf", "expected 'end' to close the if statement" },
+  { "ErrExprIf", "expected a condition after 'if'" },
+  { "ErrThenIf", "expected 'then' after the condition" },
+  { "ErrExprEIf", "expected a condition after 'elseif'" },
+  { "ErrThenEIf", "expected 'then' after the condition" },
 
-  { "ExpDefLocal", "expected a function definition or assignment after 'local'" },
-  { "ExpNameLFunc", "expected an identifier after 'function'" },
-  { "ExpEListLAssign", "expected one or more expressions after '='" },
-  { "ExpFuncName", "expected a function name after 'function'" },
-  { "ExpNameFunc1", "expected an identifier after the dot" },
-  { "ExpNameFunc2", "expected an identifier after the colon" },
-  { "ExpOpenParenParams", "expected opening '(' for the parameter list" },
-  { "MisCloseParenParams", "missing closing ')' to end the parameter list" },
-  { "ExpEndFunc", "expected 'end' to close the function body" },
+  { "ErrEndDo", "expected 'end' to close the do block" },
+  { "ErrExprWhile", "expected a condition after 'while'" },
+  { "ErrDoWhile", "expected 'do' after the condition" },
+  { "ErrEndWhile", "expected 'end' to close the while loop" },
+  { "ErrUntilRep", "expected 'until' at the end of the repeat loop" },
+  { "ErrExprRep", "expected a conditions after 'until'" },
 
-  { "ExpLHSComma", "expected a variable or table field after the comma" },
-  { "ExpEListAssign", "expected one or more expressions after '='" },
-  { "ExpLabelName", "expected a label name after '::'" },
-  { "MisCloseLabel", "missing closing '::' after the label" },
-  { "ExpLabel", "expected a label name after 'goto'" },
-  { "ExpExprCommaRet", "expected an expression after the comma" },
-  { "ExpNameNList", "expected an identifier after the comma" },
-  { "ExpExprEList", "expected an expression after the comma" },
+  { "ErrForRange", "expected a numeric or generic range after 'for'" },
+  { "ErrEndFor", "expected 'end' to close the for loop" },
+  { "ErrExprFor1", "expected a starting expression for the numeric range" },
+  { "ErrCommaFor", "expected ',' to split the start and end of the range" },
+  { "ErrExprFor2", "expected an ending expression for the numeric range" },
+  { "ErrExprFor3", "expected a step expression for the numeric range after ','" },
+  { "ErrInFor", "expected '=' or 'in' after the variable(s)" },
+  { "ErrEListFor", "expected one or more expressions after 'in'" },
+  { "ErrDoFor", "expected 'do' after the range of the for loop" },
 
-  { "ExpExprSub1", "expected an expression after the 'or' operator" },
-  { "ExpExprSub2", "expected an expression after the 'and' operator" },
-  { "ExpExprSub3", "expected an expression after the relational operator" },
-  { "ExpExprSub4", "expected an expression after the '|' operator" },
-  { "ExpExprSub5", "expected an expression after the '~' operator" },
-  { "ExpExprSub6", "expected an expression after the '&' operator" },
-  { "ExpExprSub7", "expected an expression after the bitshift operator" },
-  { "ExpExprSub8", "expected an expression after the '..' operator" },
-  { "ExpExprSub9", "expected an expression after the additive operator" },
-  { "ExpExprSub10", "expected an expression after the multiplicative operator" },
-  { "ExpExprSub11", "expected an expression after the unary operator" },
-  { "ExpExprSub12", "expected an expression after the '^' operator" },
+  { "ErrDefLocal", "expected a function definition or assignment after local" },
+  { "ErrNameLFunc", "expected a function name after 'function'" },
+  { "ErrEListLAssign", "expected one or more expressions after '='" },
+  { "ErrEqAssign", "expected '=' after the variable(s) to make an assignment" },
+  { "ErrEListAssign", "expected one or more expressions after '='" },
 
-  { "ExpNameDot", "expected a field name after the dot" },
-  { "MisCloseBracketIndex", "missing closing ']' in the table indexing" },
-  { "ExpNameColon", "expected an identifier after the colon" },
-  { "ExpFuncArgs", "expected at least one argument in the method call" },
-  { "ExpExprParen", "expected an expression after '('" },
-  { "MisCloseParenExpr", "missing closing ')' in the parenthesized expression" },
+  { "ErrFuncName", "expected a function name after 'function'" },
+  { "ErrNameFunc1", "expected a function name after '.'" },
+  { "ErrNameFunc2", "expected a method name after ':'" },
+  { "ErrOParenPList", "expected '(' for the parameter list" },
+  { "ErrCParenPList", "expected ')' to close the parameter list" },
+  { "ErrEndFunc", "expected 'end' to close the function body" },
+  { "ErrParList", "expected a variable name or '...' after ','" },
 
-  { "ExpExprArgs", "expected an expression after the comma in the argument list" },
-  { "MisCloseParenArgs", "expected closing ')' to end the argument list" },
+  { "ErrLabel", "expected a label name after '::'" },
+  { "ErrCloseLabel", "expected '::' after the label" },
+  { "ErrGoto", "expected a label after 'goto'" },
+  { "ErrRetList", "expected an expression after ',' in the return statement" },
 
-  { "MisCloseBrace", "missing closing '}' for the table constructor" },
-  { "MisCloseBracket", "missing closing ']' in the key" },
-  { "ExpEqField1", "expected '=' after the key" },
-  { "ExpExprField1", "expected an expression after '='" },
-  { "ExpEqField2", "expected '=' after the field name" },
-  { "ExpExprField2", "expected an expression after '='" },
+  { "ErrVarList", "expected a variable name after ','" },
+  { "ErrExprList", "expected an expression after ','" },
 
-  { "ExpDigitsHex", "expected one or more hexadecimal digits" },
-  { "ExpDigitsPoint", "expected one or more digits after the decimal point" },
-  { "ExpDigitsExpo", "expected one or more digits for the exponent" },
-  { "MisTermDQuote", "missing terminating double quote for the string" },
-  { "MisTermSQuote", "missing terminating single quote for the string" },
-  { "MisTermLStr", "missing closing delimiter for the multi-line string (must have same '='s)" },
+  { "ErrOrExpr", "expected an expression after 'or'" },
+  { "ErrAndExpr", "expected an expression after 'and' " },
+  { "ErrRelExpr", "expected an expression after the relational operator" },
+  { "ErrBOrExpr", "expected an expression after '|' " },
+  { "ErrBXorExpr", "expected an expression after '~' " },
+  { "ErrBAndExpr", "expected an expression after '&' " },
+  { "ErrShiftExpr", "expected an expression after the bit shift" },
+  { "ErrConcatExpr", "expected an expression after '..' " },
+  { "ErrAddExpr", "expected an expression after the additive operator" },
+  { "ErrMulExpr", "expected an expression after the multiplicative operator" },
+  { "ErrUnaryExpr", "expected an expression after the unary operator" },
+  { "ErrPowExpr", "expected an expression after '^' " },
+
+  { "ErrExprParen", "expected an expression after '('" },
+  { "ErrCParenExpr", "expected ')' to close the expression" },
+  { "ErrNameIndex", "expected a field name after '.'" },
+  { "ErrExprIndex", "expected an expression after '['" },
+  { "ErrCBracketIndex", "expected ']' to close the indexing expression" },
+  { "ErrNameMeth", "expected a method name after ':'" },
+  { "ErrMethArgs", "expected some arguments for the method call (or '()')" },
+
+  { "ErrArgList", "expected an expression after ',' in the argument list" },
+  { "ErrCParenArgs", "expected ')' to close the argument list" },
+
+  { "ErrCBraceTable", "expected '}' to close the table constructor" },
+  { "ErrEqField", "expected '=' after the table key" },
+  { "ErrExprField", "expected an expression after '='" },
+  { "ErrExprFKey", "expected an expression after '[' for the table key" },
+  { "ErrCBracketFKey", "expected ']' to close the table key" },
+
+  { "ErrDigitHex", "expected one or more hexadecimal digits after '0x'" },
+  { "ErrDigitDeci", "expected one or more digits after the decimal point" },
+  { "ErrDigitExpo", "expected one or more digits for the exponent" },
+
+  { "ErrDQuote", "unclosed string" },
+  { "ErrSQuote", "unclosed string" },
+
+  { "ErrHexEsc", "expected exactly two hexadecimal digits after '\\x'" },
+  { "ErrOBraceUEsc", "expected '{' after '\\u'" },
+  { "ErrDigitUEsc", "expected one or more hexadecimal digits for the UTF-8 code point" },
+  { "ErrCBraceUEsc", "expected '}' after the code point" },
+  { "ErrEscSeq", "invalid escape sequence" },
+
+  { "ErrCloseLStr", "unclosed long string" },
 }
 
-local function expect (patt, label)
+local function throw(label)
+  label = "Err" .. label
   for i, labelinfo in ipairs(labels) do
     if labelinfo[1] == label then
-      return patt + T(i)
+      return T(i)
     end
   end
 
   error("Label not found: " .. label)
+end
+
+local function expect (patt, label)
+  return patt + throw(label)
 end
 
 
@@ -255,69 +275,69 @@ end
 
 -- grammar
 local G = { V"Lua",
-  Lua      = V"Shebang"^-1 * V"Skip" * V"Block" * -1;
+  Lua      = V"Shebang"^-1 * V"Skip" * V"Block" * expect(P(-1), "Extra");
   Shebang  = P"#!" * (P(1) - P"\n")^0;
 
   Block       = tagC("Block", V"Stat"^0 * V"RetStat"^-1);
   Stat        = V"IfStat" + V"DoStat" + V"WhileStat" + V"RepeatStat" + V"ForStat"
               + V"LocalStat" + V"FuncStat" + V"BreakStat" + V"LabelStat" + V"GoToStat"
-              + V"FuncCall" + V"Assignment" + sym(";") + -V"BlockEnd" * T(62);  -- TODO throw the proper label
+              + V"FuncCall" + V"Assignment" + sym(";") + -V"BlockEnd" * throw("InvalidStat");
   BlockEnd    = P"return" + "end" + "elseif" + "else" + "until" + -1;
 
-  IfStat      = tagC("If", V"IfPart" * V"ElseIfPart"^0 * V"ElsePart"^-1 * expect(kw("end"), "ExpEndIf"));
-  IfPart      = kw("if") * expect(V"Expr", "ExpExprIf") * expect(kw("then"), "ExpThenIf") * V"Block";
-  ElseIfPart  = kw("elseif") * expect(V"Expr", "ExpExprEIf") * expect(kw("then"), "ExpThenEIf") * V"Block";
+  IfStat      = tagC("If", V"IfPart" * V"ElseIfPart"^0 * V"ElsePart"^-1 * expect(kw("end"), "EndIf"));
+  IfPart      = kw("if") * expect(V"Expr", "ExprIf") * expect(kw("then"), "ThenIf") * V"Block";
+  ElseIfPart  = kw("elseif") * expect(V"Expr", "ExprEIf") * expect(kw("then"), "ThenEIf") * V"Block";
   ElsePart    = kw("else") * V"Block";
 
-  DoStat      = kw("do") * V"Block" * expect(kw("end"), "ExpEndDo") / tagDo;
-  WhileStat   = tagC("While", kw("while") * expect(V"Expr", "ExpExprWhile") * V"WhileBody");
-  WhileBody   = expect(kw("do"), "ExpDoWhile") * V"Block" * expect(kw("end"), "ExpEndWhile");
-  RepeatStat  = tagC("Repeat", kw("repeat") * V"Block" * expect(kw("until"), "ExpUntilRep") * expect(V"Expr", "ExpExprRep"));
+  DoStat      = kw("do") * V"Block" * expect(kw("end"), "EndDo") / tagDo;
+  WhileStat   = tagC("While", kw("while") * expect(V"Expr", "ExprWhile") * V"WhileBody");
+  WhileBody   = expect(kw("do"), "DoWhile") * V"Block" * expect(kw("end"), "EndWhile");
+  RepeatStat  = tagC("Repeat", kw("repeat") * V"Block" * expect(kw("until"), "UntilRep") * expect(V"Expr", "ExprRep"));
 
-  ForStat   = kw("for") * expect(V"ForNum" + V"ForIn", "ExpForRange") * expect(kw("end"), "ExpEndFor");
+  ForStat   = kw("for") * expect(V"ForNum" + V"ForIn", "ForRange") * expect(kw("end"), "EndFor");
   ForNum    = tagC("Fornum", V"Id" * sym("=") * V"NumRange" * V"ForBody");
-  NumRange  = expect(V"Expr", "ExpExprFor1") * expect(sym(","), "ExpCommaFor") *expect(V"Expr", "ExpExprFor2")
-            * (sym(",") * expect(V"Expr", "ExpExprFor3"))^-1;
-  ForIn     = tagC("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExprList", "ExpEListFor") * V"ForBody");
-  ForBody   = expect(kw("do"), "ExpDoFor") * V"Block";
+  NumRange  = expect(V"Expr", "ExprFor1") * expect(sym(","), "CommaFor") *expect(V"Expr", "ExprFor2")
+            * (sym(",") * expect(V"Expr", "ExprFor3"))^-1;
+  ForIn     = tagC("Forin", V"NameList" * expect(kw("in"), "InFor") * expect(V"ExprList", "EListFor") * V"ForBody");
+  ForBody   = expect(kw("do"), "DoFor") * V"Block";
 
-  LocalStat    = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "ExpDefLocal");
-  LocalFunc    = tagC("Localrec", kw("function") * expect(V"Id", "ExpNameLFunc") * V"FuncBody") / fixFuncStat;
-  LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExprList", "ExpEListLAssign") + Ct(Cc())));
-  Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExprList", "ExpEListAssign"));
+  LocalStat    = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "DefLocal");
+  LocalFunc    = tagC("Localrec", kw("function") * expect(V"Id", "NameLFunc") * V"FuncBody") / fixFuncStat;
+  LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExprList", "EListLAssign") + Ct(Cc())));
+  Assignment   = tagC("Set", V"VarList" * expect(sym("="), "EqAssign") * expect(V"ExprList", "EListAssign"));
 
-  FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "ExpFuncName") * V"FuncBody") / fixFuncStat;
-  FuncName    = Cf(V"Id" * (sym(".") * expect(V"StrId", "ExpNameFunc1"))^0, insertIndex)
-              * (sym(":") * expect(V"StrId", "ExpNameFunc2"))^-1 / markMethod;
-  FuncBody    = tagC("Function", V"FuncParams" * V"Block" * expect(kw("end"), "ExpEndFunc"));
-  FuncParams  = expect(sym("("), "ExpOpenParenParams") * V"ParList" * expect(sym(")"), "MisCloseParenParams");
-  ParList     = V"NameList" * (sym(",") * tagC("Dots", sym("...")))^-1 / addDots
+  FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "FuncName") * V"FuncBody") / fixFuncStat;
+  FuncName    = Cf(V"Id" * (sym(".") * expect(V"StrId", "NameFunc1"))^0, insertIndex)
+              * (sym(":") * expect(V"StrId", "NameFunc2"))^-1 / markMethod;
+  FuncBody    = tagC("Function", V"FuncParams" * V"Block" * expect(kw("end"), "EndFunc"));
+  FuncParams  = expect(sym("("), "OParenPList") * V"ParList" * expect(sym(")"), "CParenPList");
+  ParList     = V"NameList" * (sym(",") * expect(tagC("Dots", sym("...")), "ParList"))^-1 / addDots
               + Ct(tagC("Dots", sym("...")))
               + Ct(Cc()); -- Cc({}) generates a bug since the {} would be shared across parses
 
-  LabelStat  = tagC("Label", sym("::") * expect(V"Name", "ExpLabelName") * expect(sym("::"), "MisCloseLabel"));
-  GoToStat   = tagC("Goto", kw("goto") * expect(V"Name", "ExpLabel"));
+  LabelStat  = tagC("Label", sym("::") * expect(V"Name", "Label") * expect(sym("::"), "CloseLabel"));
+  GoToStat   = tagC("Goto", kw("goto") * expect(V"Name", "Goto"));
   BreakStat  = tagC("Break", kw("break"));
-  RetStat    = tagC("Return", kw("return") * commaSep(V"Expr", "ExpExprCommaRet")^-1 * sym(";")^-1);
+  RetStat    = tagC("Return", kw("return") * commaSep(V"Expr", "RetList")^-1 * sym(";")^-1);
 
   NameList  = tagC("NameList", commaSep(V"Id"));
-  VarList   = tagC("VarList", commaSep(V"VarExpr"));
-  ExprList  = tagC("ExpList", commaSep(V"Expr"));
+  VarList   = tagC("VarList", commaSep(V"VarExpr"), "VarList");
+  ExprList  = tagC("ExpList", commaSep(V"Expr"), "ExprList");
 
   Expr        = V"OrExpr";
-  OrExpr      = chainOp(V"AndExpr", V"OrOp", "ExpExprSub1");
-  AndExpr     = chainOp(V"RelExpr", V"AndOp", "ExpExprSub2");
-  RelExpr     = chainOp(V"BOrExpr", V"RelOp", "ExpExprSub3");
-  BOrExpr     = chainOp(V"BXorExpr", V"BOrOp", "ExpExprSub4");
-  BXorExpr    = chainOp(V"BAndExpr", V"BXorOp", "ExpExprSub5");
-  BAndExpr    = chainOp(V"ShiftExpr", V"BAndOp", "ExpExprSub6");
-  ShiftExpr   = chainOp(V"ConcatExpr", V"ShiftOp", "ExpExprSub7");
-  ConcatExpr  = V"AddExpr" * (V"ConcatOp" * expect(V"ConcatExpr", "ExpExprSub8"))^-1 / binaryOp;
-  AddExpr     = chainOp(V"MulExpr", V"AddOp", "ExpExprSub9");
-  MulExpr     = chainOp(V"UnaryExpr", V"MulOp", "ExpExprSub10");
-  UnaryExpr   = V"UnaryOp" * expect(V"UnaryExpr", "ExpExprSub11") / unaryOp
+  OrExpr      = chainOp(V"AndExpr", V"OrOp", "OrExpr");
+  AndExpr     = chainOp(V"RelExpr", V"AndOp", "AndExpr");
+  RelExpr     = chainOp(V"BOrExpr", V"RelOp", "RelExpr");
+  BOrExpr     = chainOp(V"BXorExpr", V"BOrOp", "BOrExpr");
+  BXorExpr    = chainOp(V"BAndExpr", V"BXorOp", "BXorExpr");
+  BAndExpr    = chainOp(V"ShiftExpr", V"BAndOp", "BAndExpr");
+  ShiftExpr   = chainOp(V"ConcatExpr", V"ShiftOp", "ShiftExpr");
+  ConcatExpr  = V"AddExpr" * (V"ConcatOp" * expect(V"ConcatExpr", "ConcatExpr"))^-1 / binaryOp;
+  AddExpr     = chainOp(V"MulExpr", V"AddOp", "AddExpr");
+  MulExpr     = chainOp(V"UnaryExpr", V"MulOp", "MulExpr");
+  UnaryExpr   = V"UnaryOp" * expect(V"UnaryExpr", "UnaryExpr") / unaryOp
               + V"PowExpr";
-  PowExpr     = V"SimpleExpr" * (V"PowOp" * expect(V"UnaryExpr", "ExpExprSub12"))^-1 / binaryOp;
+  PowExpr     = V"SimpleExpr" * (V"PowOp" * expect(V"UnaryExpr", "PowExpr"))^-1 / binaryOp;
 
   SimpleExpr = tagC("Number", V"Number")
              + tagC("String", V"String")
@@ -333,22 +353,22 @@ local G = { V"Lua",
   VarExpr   = Cmt(V"SuffixedExpr", function(s, i, exp) return exp.tag == "Id" or exp.tag == "Index", exp end);
 
   SuffixedExpr  = Cf(V"PrimaryExpr" * (V"Index" + V"Call")^0, makeIndexOrCall);
-  PrimaryExpr   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExpExprParen") * expect(sym(")"), "MisCloseParenExpr"));
-  Index         = tagC("DotIndex", sym(".") * expect(V"StrId", "ExpNameDot"))
-                + tagC("ArrayIndex", sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracketIndex"));
-  Call          = tagC("Invoke", Cg(sym(":") * expect(V"StrId", "ExpNameColon") * expect(V"FuncArgs", "ExpFuncArgs")))
+  PrimaryExpr   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExprParen") * expect(sym(")"), "CParenExpr"));
+  Index         = tagC("DotIndex", sym(".") * expect(V"StrId", "NameIndex"))
+                + tagC("ArrayIndex", sym("[" * -P(S"=[")) * expect(V"Expr", "ExprIndex") * expect(sym("]"), "CBracketIndex"));
+  Call          = tagC("Invoke", Cg(sym(":") * expect(V"StrId", "NameMeth") * expect(V"FuncArgs", "MethArgs")))
                 + tagC("Call", V"FuncArgs");
 
   FuncDef   = kw("function") * V"FuncBody";
-  FuncArgs  = sym("(") * commaSep(V"Expr")^-1 * sym(")")
+  FuncArgs  = sym("(") * commaSep(V"Expr", "ArgList")^-1 * expect(sym(")"), "CParenArgs")
             + V"Table"
             + tagC("String", V"String");
 
-  Table      = tagC("Table", sym("{") * V"FieldList"^-1 * expect(sym("}"), "MisCloseBrace"));
+  Table      = tagC("Table", sym("{") * V"FieldList"^-1 * expect(sym("}"), "CBraceTable"));
   FieldList  = sepBy(V"Field", V"FieldSep") * V"FieldSep"^-1;
-  Field      = tagC("Pair", V"FieldKey" * expect(sym("="), "ExpEqField1") * expect(V"Expr", "ExpExprField1"))
+  Field      = tagC("Pair", V"FieldKey" * expect(sym("="), "EqField") * expect(V"Expr", "ExprField"))
              + V"Expr";
-  FieldKey   = sym("[" * -P(S"=[")) * V"Expr" * expect(sym("]"), "MisCloseBracket")
+  FieldKey   = sym("[" * -P(S"=[")) * expect(V"Expr", "ExprFKey") * expect(sym("]"), "CBracketFKey")
              + V"StrId";
   FieldSep   = sym(",") + sym(";");
 
@@ -372,17 +392,17 @@ local G = { V"Lua",
   IdRest    = alnum + P"_";
 
   Number   = token((V"Hex" + V"Float" + V"Int") / tonumber);
-  Hex      = (P"0x" + "0X") * expect(xdigit^1, "ExpDigitsHex");
+  Hex      = (P"0x" + "0X") * expect(xdigit^1, "DigitHex");
   Float    = V"Decimal" * V"Expo"^-1
            + V"Int" * V"Expo";
   Decimal  = digit^1 * "." * digit^0
-           + P"." * -P"." * digit^1;
-  Expo     = S"eE" * S"+-"^-1 * expect(digit^1, "ExpDigitsExpo");
+           + P"." * -P"." * expect(digit^1, "DigitDeci");
+  Expo     = S"eE" * S"+-"^-1 * expect(digit^1, "DigitExpo");
   Int      = digit^1;
 
   String    = token(V"ShortStr" + V"LongStr");
-  ShortStr  = P'"' * Cs((V"EscSeq" + (P(1)-S'"\n'))^0) * expect(P'"', "MisTermDQuote")
-            + P"'" * Cs((V"EscSeq" + (P(1)-S"'\n"))^0) * expect(P"'", "MisTermSQuote");
+  ShortStr  = P'"' * Cs((V"EscSeq" + (P(1)-S'"\n'))^0) * expect(P'"', "DQuote")
+            + P"'" * Cs((V"EscSeq" + (P(1)-S"'\n"))^0) * expect(P"'", "SQuote");
 
   EscSeq = P"\\" / ""  -- remove backslash
          * ( P"a" / "\a"
@@ -403,13 +423,16 @@ local G = { V"Lua",
            + P"z" * space^0  / ""
 
            + digit * digit^-2 / tonumber / string.char
-           + P"x" * C(xdigit * xdigit) * Cc(16)       / tonumber / string.char
-           + P"u" * "{" * C(xdigit^1) * Cc(16) * "}"  / tonumber / string.char  -- true max is \u{10FFFF}
+           + P"x" * expect(C(xdigit * xdigit), "HexEsc") * Cc(16) / tonumber / string.char
+           + P"u" * expect("{", "OBraceUEsc")
+                  * expect(C(xdigit^1), "DigitUEsc") * Cc(16)
+                  * expect("}", "CBraceUEsc")
+                  / tonumber / string.char  -- true max is \u{10FFFF}
 
-           + T(63)  -- TODO add a proper error label for invalid sequences
+           + throw("EscSeq")
            );
 
-  LongStr  = V"Open" * C((P(1) - V"CloseEq")^0) * expect(V"Close", "MisTermLStr") / function (s, eqs) return s end;
+  LongStr  = V"Open" * C((P(1) - V"CloseEq")^0) * expect(V"Close", "CloseLStr") / function (s, eqs) return s end;
   Open     = "[" * Cg(V"Equals", "openEq") * "[" * P"\n"^-1;
   Close    = "]" * C(V"Equals") * "]";
   Equals   = P"="^0;
