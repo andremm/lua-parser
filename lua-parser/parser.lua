@@ -258,11 +258,11 @@ local G = { V"Lua",
   Lua      = V"Shebang"^-1 * V"Skip" * V"Block" * -1;
   Shebang  = P"#!" * (P(1) - P"\n")^0;
 
-  Block       = tagC("Block", V"Stat"^1 * V"RetStat"^-1 + V"RetStat" + V"EmptyBlock");
-  EmptyBlock  = #(P"end" + "elseif" + "else" + "until" + -1);
+  Block       = tagC("Block", V"Stat"^0 * V"RetStat"^-1);
   Stat        = V"IfStat" + V"DoStat" + V"WhileStat" + V"RepeatStat" + V"ForStat"
               + V"LocalStat" + V"FuncStat" + V"BreakStat" + V"LabelStat" + V"GoToStat"
-              + V"FuncCall" + V"Assignment" + sym(";");
+              + V"FuncCall" + V"Assignment" + sym(";") + -V"BlockEnd" * T(62);  -- TODO throw the proper label
+  BlockEnd    = P"return" + "end" + "elseif" + "else" + "until" + -1;
 
   IfStat      = tagC("If", V"IfPart" * V"ElseIfPart"^0 * V"ElsePart"^-1 * expect(kw("end"), "ExpEndIf"));
   IfPart      = kw("if") * expect(V"Expr", "ExpExprIf") * expect(kw("then"), "ExpThenIf") * V"Block";
