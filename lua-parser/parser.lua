@@ -354,7 +354,7 @@ local G = { V"Lua",
 
   SuffixedExpr  = Cf(V"PrimaryExpr" * (V"Index" + V"Call")^0, makeIndexOrCall);
   PrimaryExpr   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExprParen") * expect(sym(")"), "CParenExpr"));
-  Index         = tagC("DotIndex", sym(".") * expect(V"StrId", "NameIndex"))
+  Index         = tagC("DotIndex", sym("." * -P".") * expect(V"StrId", "NameIndex"))
                 + tagC("ArrayIndex", sym("[" * -P(S"=[")) * expect(V"Expr", "ExprIndex") * expect(sym("]"), "CBracketIndex"));
   Call          = tagC("Invoke", Cg(sym(":") * expect(V"StrId", "NameMeth") * expect(V"FuncArgs", "MethArgs")))
                 + tagC("Call", V"FuncArgs");
@@ -369,7 +369,7 @@ local G = { V"Lua",
   Field      = tagC("Pair", V"FieldKey" * expect(sym("="), "EqField") * expect(V"Expr", "ExprField"))
              + V"Expr";
   FieldKey   = sym("[" * -P(S"=[")) * expect(V"Expr", "ExprFKey") * expect(sym("]"), "CBracketFKey")
-             + V"StrId";
+             + V"StrId" * #("=" * -P"=");
   FieldSep   = sym(",") + sym(";");
 
   Id     = tagC("Id", V"Name");
