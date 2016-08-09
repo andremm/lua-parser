@@ -278,13 +278,13 @@ local G = { V"Lua",
   ForNum    = tagC("Fornum", V"Id" * sym("=") * V"NumRange" * V"ForBody");
   NumRange  = expect(V"Expr", "ExpExprFor1") * expect(sym(","), "ExpCommaFor") *expect(V"Expr", "ExpExprFor2")
             * (sym(",") * expect(V"Expr", "ExpExprFor3"))^-1;
-  ForIn     = tagC("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExpList", "ExpEListFor") * V"ForBody");
+  ForIn     = tagC("Forin", V"NameList" * expect(kw("in"), "ExpInFor") * expect(V"ExprList", "ExpEListFor") * V"ForBody");
   ForBody   = expect(kw("do"), "ExpDoFor") * V"Block";
 
   LocalStat    = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "ExpDefLocal");
   LocalFunc    = tagC("Localrec", kw("function") * expect(V"Id", "ExpNameLFunc") * V"FuncBody") / fixFuncStat;
-  LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExpList", "ExpEListLAssign") + Ct(Cc())));
-  Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExpList", "ExpEListAssign"));
+  LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExprList", "ExpEListLAssign") + Ct(Cc())));
+  Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExprList", "ExpEListAssign"));
 
   FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "ExpFuncName") * V"FuncBody") / fixFuncStat;
   FuncName    = Cf(V"Id" * (sym(".") * expect(V"StrId", "ExpNameFunc1"))^0, insertIndex)
@@ -302,7 +302,7 @@ local G = { V"Lua",
 
   NameList  = tagC("NameList", commaSep(V"Id"));
   VarList   = tagC("VarList", commaSep(V"VarExpr"));
-  ExpList   = tagC("ExpList", commaSep(V"Expr"));
+  ExprList  = tagC("ExpList", commaSep(V"Expr"));
 
   Expr        = V"OrExpr";
   OrExpr      = chainOp(V"AndExpr", V"OrOp", "ExpExprSub1");
