@@ -466,13 +466,20 @@ local G = { V"Lua",
 }
 
 local parser = {}
-local validate = require("lua-parser.validator").validate
+
+local validator = require("lua-parser.validator")
+local validate = validator.validate
+local syntaxerror = validator.syntaxerror
 
 function parser.parse (subject, filename)
   local errorinfo = { subject = subject, filename = filename }
   lpeg.setmaxstack(1000)
-  local ast, error_msg = lpeg.match(G, subject, nil, errorinfo)
-  if not ast then return ast, error_msg end
+  local ast, label, sfail = lpeg.match(G, subject, nil, errorinfo)
+  if not ast then
+    local errpos = #subject-#sfail
+    local errmsg = labels[label][2]
+    return ast, syntaxerror(errorinfo, errpos, errmsg)
+  end
   return validate(ast, errorinfo)
 end
 

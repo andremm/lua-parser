@@ -392,4 +392,4 @@ local function traverse (ast, errorinfo)
   return ast
 end
 
-return { validate = traverse }
+return { validate = traverse, syntaxerror = syntaxerror }
