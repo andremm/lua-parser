@@ -299,6 +299,39 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
+s = [=[
+-- short string test begin
+
+s1 = 'a \z  b'
+s2 = "adeus \z
+      mundo\
+\z    maravilhoso"
+
+-- short string test end
+]=]
+e = [=[
+{ `Set{ { `Id "s1" }, { `String "a b" } }, `Set{ { `Id "s2" }, { `String "adeus mundo\nmaravilhoso" } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+-- short string test begin
+
+deci = '\28'
+hex = '\x1C'
+uni = '\u{001C}'
+
+-- short string test end
+]=]
+e = [=[
+{ `Set{ { `Id "deci" }, { `String "\028" } }, `Set{ { `Id "hex" }, { `String "\028" } }, `Set{ { `Id "uni" }, { `String "\028" } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
 -- syntax error
 
 if not metalua then
