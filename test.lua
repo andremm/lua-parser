@@ -1190,6 +1190,39 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
+s = [=[
+local x = 0
+local t = {x}
+]=]
+e = [=[
+{ `Local{ { `Id "x" }, { `Number "0" } }, `Local{ { `Id "t" }, { `Table{ `Id "x" } } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local x = 0
+local t = {x = 1}
+]=]
+e = [=[
+{ `Local{ { `Id "x" }, { `Number "0" } }, `Local{ { `Id "t" }, { `Table{ `Pair{ `String "x", `Number "1" } } } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local x = 0
+local t = {x == 1}
+]=]
+e = [=[
+{ `Local{ { `Id "x" }, { `Number "0" } }, `Local{ { `Id "t" }, { `Table{ `Op{ "eq", `Id "x", `Number "1" } } } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
 -- vararg
 
 s = [=[
@@ -1391,6 +1424,17 @@ concat2 = 2^3..1
 ]=]
 e = [=[
 test.lua:1:15: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local s = "1 + 1 = "
+print(s .. 1+1)
+]=]
+e = [=[
+{ `Local{ { `Id "s" }, { `String "1 + 1 = " } }, `Call{ `Id "print", `Op{ "concat", `Id "s", `Op{ "add", `Number "1", `Number "1" } } } }
 ]=]
 
 r = parse(s)
