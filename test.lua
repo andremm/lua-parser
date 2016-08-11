@@ -1390,7 +1390,7 @@ s = [=[
 concat2 = 2^3..1
 ]=]
 e = [=[
-test.lua:1:15: syntax error, invalid statement
+test.lua:1:15: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -1479,7 +1479,7 @@ s = [=[
 goto label
 ]=]
 e = [=[
-test.lua:2:1: syntax error, unexpected character(s)
+test.lua:2:1: syntax error, unexpected character(s), expected EOF
 ]=]
 
 r = parse(s)
@@ -1667,7 +1667,7 @@ return 1;
 return 1,1-2*3+4,"alo";
 ]=]
 e = [=[
-test.lua:2:1: syntax error, unexpected character(s)
+test.lua:2:1: syntax error, unexpected character(s), expected EOF
 ]=]
 
 r = parse(s)
@@ -1761,7 +1761,7 @@ s = [=[
 return; print("hello")
 ]=]
 e = [=[
-test.lua:1:9: syntax error, unexpected character(s)
+test.lua:1:9: syntax error, unexpected character(s), expected EOF
 ]=]
 
 r = parse(s)
@@ -1771,7 +1771,7 @@ s = [=[
 while foo do if bar then baz() end end end
 ]=]
 e = [=[
-test.lua:1:40: syntax error, unexpected character(s)
+test.lua:1:40: syntax error, unexpected character(s), expected EOF
 ]=]
 
 r = parse(s)
@@ -1782,7 +1782,7 @@ s = [=[
 find_solution() ? print("yes") : print("no")
 ]=]
 e = [=[
-test.lua:1:17: syntax error, invalid statement
+test.lua:1:17: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -1792,7 +1792,7 @@ s = [=[
 local i : int = 0
 ]=]
 e = [=[
-test.lua:1:9: syntax error, invalid statement
+test.lua:1:9: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -1802,7 +1802,7 @@ s = [=[
 local a = 1, b = 2
 ]=]
 e = [=[
-test.lua:1:16: syntax error, invalid statement
+test.lua:1:16: syntax error, unexpected token, invalid start of statement
 ]=]
 
 s = [=[
@@ -1810,7 +1810,7 @@ x = -
 y = 2
 ]=]
 e = [=[
-test.lua:2:3: syntax error, invalid statement
+test.lua:2:3: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -1823,7 +1823,7 @@ while foo() do
 end
 ]=]
 e = [=[
-test.lua:2:3: syntax error, invalid statement
+test.lua:2:3: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -1836,7 +1836,7 @@ until condition
 end
 ]=]
 e = [=[
-test.lua:1:7: syntax error, invalid statement
+test.lua:1:7: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -1850,7 +1850,73 @@ function f(x)
 end
 ]=]
 e = [=[
-test.lua:3:3: syntax error, invalid statement
+test.lua:3:3: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x;
+]=]
+e = [=[
+test.lua:1:1: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+a, b, c
+]=]
+e = [=[
+test.lua:1:1: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local x = 42 // the meaning of life
+]=]
+e = [=[
+test.lua:1:21: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+let x = 2
+]=]
+e = [=[
+test.lua:1:1: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+if p then
+  f()
+elif q then
+  g()
+end
+]=]
+e = [=[
+test.lua:3:1: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo()
+  bar()
+emd
+]=]
+e = [=[
+test.lua:3:1: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -2269,73 +2335,6 @@ local x = ?
 ]=]
 e = [=[
 test.lua:1:11: syntax error, expected one or more expressions after '='
-]=]
-
-r = parse(s)
-assert(r == e)
-
--- ErrEqAssign
-s = [=[
-x;
-]=]
-e = [=[
-test.lua:1:2: syntax error, expected '=' after the variable(s) to make an assignment
-]=]
-
-r = parse(s)
-assert(r == e)
-
-s = [=[
-a, b, c
-]=]
-e = [=[
-test.lua:2:1: syntax error, expected '=' after the variable(s) to make an assignment
-]=]
-
-r = parse(s)
-assert(r == e)
-
-s = [=[
-local x = 42 // the meaning of life
-]=]
-e = [=[
-test.lua:1:29: syntax error, expected '=' after the variable(s) to make an assignment
-]=]
-
-r = parse(s)
-assert(r == e)
-
-s = [=[
-let x = 2
-]=]
-e = [=[
-test.lua:1:5: syntax error, expected '=' after the variable(s) to make an assignment
-]=]
-
-r = parse(s)
-assert(r == e)
-
-s = [=[
-if p then
-  f()
-elif q then
-  g()
-end
-]=]
-e = [=[
-test.lua:3:6: syntax error, expected '=' after the variable(s) to make an assignment
-]=]
-
-r = parse(s)
-assert(r == e)
-
-s = [=[
-function foo()
-  bar()
-emd
-]=]
-e = [=[
-test.lua:4:1: syntax error, expected '=' after the variable(s) to make an assignment
 ]=]
 
 r = parse(s)
@@ -3449,7 +3448,7 @@ test.lua:1:9: syntax error, expected one or more digits for the exponent
 r = parse(s)
 assert(r == e)
 
--- ErrDQuote
+-- ErrQuote
 s = [=[
 local message = "Hello
 ]=]
@@ -3472,7 +3471,6 @@ test.lua:2:1: syntax error, unclosed string
 r = parse(s)
 assert(r == e)
 
--- ErrSQuote
 s = [=[
 local message = 'Hello
 ]=]

@@ -67,8 +67,8 @@ local space = lpeg.space
 -- error message auxiliary functions
 
 local labels = {
-  { "ErrExtra", "unexpected character(s)" },
-  { "ErrInvalidStat", "invalid statement" },
+  { "ErrExtra", "unexpected character(s), expected EOF" },
+  { "ErrInvalidStat", "unexpected token, invalid start of statement" },
 
   { "ErrEndIf", "expected 'end' to close the if statement" },
   { "ErrExprIf", "expected a condition after 'if'" },
@@ -96,7 +96,6 @@ local labels = {
   { "ErrDefLocal", "expected a function definition or assignment after local" },
   { "ErrNameLFunc", "expected a function name after 'function'" },
   { "ErrEListLAssign", "expected one or more expressions after '='" },
-  { "ErrEqAssign", "expected '=' after the variable(s) to make an assignment" },
   { "ErrEListAssign", "expected one or more expressions after '='" },
 
   { "ErrFuncName", "expected a function name after 'function'" },
@@ -149,15 +148,12 @@ local labels = {
   { "ErrDigitDeci", "expected one or more digits after the decimal point" },
   { "ErrDigitExpo", "expected one or more digits for the exponent" },
 
-  { "ErrDQuote", "unclosed string" },
-  { "ErrSQuote", "unclosed string" },
-
+  { "ErrQuote", "unclosed string" },
   { "ErrHexEsc", "expected exactly two hexadecimal digits after '\\x'" },
   { "ErrOBraceUEsc", "expected '{' after '\\u'" },
   { "ErrDigitUEsc", "expected one or more hexadecimal digits for the UTF-8 code point" },
   { "ErrCBraceUEsc", "expected '}' after the code point" },
   { "ErrEscSeq", "invalid escape sequence" },
-
   { "ErrCloseLStr", "unclosed long string" },
 }
 
@@ -304,7 +300,7 @@ local G = { V"Lua",
   LocalStat    = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "DefLocal");
   LocalFunc    = tagC("Localrec", kw("function") * expect(V"Id", "NameLFunc") * V"FuncBody") / fixFuncStat;
   LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExprList", "EListLAssign") + Ct(Cc())));
-  Assignment   = tagC("Set", V"VarList" * expect(sym("="), "EqAssign") * expect(V"ExprList", "EListAssign"));
+  Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExprList", "EListAssign"));
 
   FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "FuncName") * V"FuncBody") / fixFuncStat;
   FuncName    = Cf(V"Id" * (sym(".") * expect(V"StrId", "NameFunc1"))^0, insertIndex)
@@ -401,8 +397,8 @@ local G = { V"Lua",
   Int      = digit^1;
 
   String    = token(V"ShortStr" + V"LongStr");
-  ShortStr  = P'"' * Cs((V"EscSeq" + (P(1)-S'"\n'))^0) * expect(P'"', "DQuote")
-            + P"'" * Cs((V"EscSeq" + (P(1)-S"'\n"))^0) * expect(P"'", "SQuote");
+  ShortStr  = P'"' * Cs((V"EscSeq" + (P(1)-S'"\n'))^0) * expect(P'"', "Quote")
+            + P"'" * Cs((V"EscSeq" + (P(1)-S"'\n"))^0) * expect(P"'", "Quote");
 
   EscSeq = P"\\" / ""  -- remove backslash
          * ( P"a" / "\a"
