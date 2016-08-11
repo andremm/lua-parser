@@ -321,8 +321,8 @@ local G = { V"Lua",
   RetStat    = tagC("Return", kw("return") * commaSep(V"Expr", "RetList")^-1 * sym(";")^-1);
 
   NameList  = tagC("NameList", commaSep(V"Id"));
-  VarList   = tagC("VarList", commaSep(V"VarExpr"), "VarList");
-  ExprList  = tagC("ExpList", commaSep(V"Expr"), "ExprList");
+  VarList   = tagC("VarList", commaSep(V"VarExpr", "VarList"));
+  ExprList  = tagC("ExpList", commaSep(V"Expr", "ExprList"));
 
   Expr        = V"OrExpr";
   OrExpr      = chainOp(V"AndExpr", V"OrOp", "OrExpr");

@@ -1754,4 +1754,1855 @@ assert(r == e)
 
 end
 
+print("> testing more syntax errors...")
+
+-- ErrExtra
+s = [=[
+return; print("hello")
+]=]
+e = [=[
+test.lua:1:9: syntax error, unexpected character(s)
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+while foo do if bar then baz() end end end
+]=]
+e = [=[
+test.lua:1:40: syntax error, unexpected character(s)
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrInvalidStat
+s = [=[
+find_solution() ? print("yes") : print("no")
+]=]
+e = [=[
+test.lua:1:17: syntax error, invalid statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local i : int = 0
+]=]
+e = [=[
+test.lua:1:9: syntax error, invalid statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local a = 1, b = 2
+]=]
+e = [=[
+test.lua:1:16: syntax error, invalid statement
+]=]
+
+s = [=[
+x = -
+y = 2
+]=]
+e = [=[
+test.lua:2:3: syntax error, invalid statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+while foo() do
+  // not a lua comment
+  bar()
+end
+]=]
+e = [=[
+test.lua:2:3: syntax error, invalid statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+repeat:
+  action()
+until condition
+end
+]=]
+e = [=[
+test.lua:1:7: syntax error, invalid statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function f(x)
+  local result
+  ... -- TODO: compute for the next result
+  return result
+end
+]=]
+e = [=[
+test.lua:3:3: syntax error, invalid statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEndIf
+s = [=[
+if 1 > 2 then print("impossible")
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected 'end' to close the if statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+if 1 > 2 then return; print("impossible") end
+]=]
+e = [=[
+test.lua:1:23: syntax error, expected 'end' to close the if statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+if condA then doThis()
+else if condB then doThat() end
+]=]
+e = [=[
+test.lua:3:1: syntax error, expected 'end' to close the if statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+if a then
+  b()
+else
+  c()
+else
+  d()
+end
+]=]
+e = [=[
+test.lua:5:1: syntax error, expected 'end' to close the if statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprIf
+s = [=[
+if then print("that") end
+]=]
+e = [=[
+test.lua:1:4: syntax error, expected a condition after 'if'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+if !ok then error("fail") end
+]=]
+e = [=[
+test.lua:1:4: syntax error, expected a condition after 'if'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrThenIf
+s = [=[
+if age < 18
+  print("too young!")
+end
+]=]
+e = [=[
+test.lua:2:3: syntax error, expected 'then' after the condition
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprEIf
+s = [=[
+if age < 18 then print("too young!")
+elseif then print("too old") end
+]=]
+e = [=[
+test.lua:2:8: syntax error, expected a condition after 'elseif'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrThenEIf
+s = [=[
+if not result then error("fail")
+elseif result > 0:
+  process(result)
+end
+]=]
+e = [=[
+test.lua:2:18: syntax error, expected 'then' after the condition
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEndDo
+s = [=[
+do something()
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected 'end' to close the do block
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+do
+  return arr[i]
+  i = i + 1
+end
+]=]
+e = [=[
+test.lua:3:3: syntax error, expected 'end' to close the do block
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprWhile
+s = [=[
+while !done do done = work() end
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected a condition after 'while'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+while do print("hello again!") end
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected a condition after 'while'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDoWhile
+s = [=[
+while not done then work() end
+]=]
+e = [=[
+test.lua:1:16: syntax error, expected 'do' after the condition
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+while not done
+  work()
+end
+]=]
+e = [=[
+test.lua:2:3: syntax error, expected 'do' after the condition
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEndWhile
+s = [=[
+while not found do i = i + 1
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected 'end' to close the while loop
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+while i < #arr do
+  if arr[i] == target then break
+  i = i +1
+end
+]=]
+e = [=[
+test.lua:5:1: syntax error, expected 'end' to close the while loop
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrUntilRep
+s = [=[
+repeat play_song() while on_repeat
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected 'do' after the condition
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprRep
+s = [=[
+repeat film() until end
+]=]
+e = [=[
+test.lua:1:21: syntax error, expected a conditions after 'until'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrForRange
+s = [=[
+for (key, val) in obj do
+  print(key .. " -> " .. val)
+end
+]=]
+e = [=[
+test.lua:1:5: syntax error, expected a numeric or generic range after 'for'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEndFor
+s = [=[
+for i = 1,10 do print(i)
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected 'end' to close the for loop
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprFor1
+s = [=[
+for i = ,10 do print(i) end
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected a starting expression for the numeric range
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCommaFor
+s = [=[
+for i = 1 to 10 do print(i) end
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected ',' to split the start and end of the range
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprFor2
+s = [=[
+for i = 1, do print(i) end
+]=]
+e = [=[
+test.lua:1:12: syntax error, expected an ending expression for the numeric range
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprFor3
+s = [=[
+for i = 1,10, do print(i) end
+]=]
+e = [=[
+test.lua:1:15: syntax error, expected a step expression for the numeric range after ','
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrInFor
+s = [=[
+for arr do print(arr[i]) end
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected '=' or 'in' after the variable(s)
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+for nums := 1,10 do print(i) end
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected '=' or 'in' after the variable(s)
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEListFor
+s = [=[
+for i in ? do print(i) end
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected one or more expressions after 'in'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDoFor
+s = [=[
+for i = 1,10 doo print(i) end
+]=]
+e = [=[
+test.lua:1:14: syntax error, expected 'do' after the range of the for loop
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+for _, elem in ipairs(list)
+  print(elem)
+end
+]=]
+e = [=[
+test.lua:2:3: syntax error, expected 'do' after the range of the for loop
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDefLocal
+s = [=[
+local
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected a function definition or assignment after local
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local; x = 2
+]=]
+e = [=[
+test.lua:1:6: syntax error, expected a function definition or assignment after local
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local *p = nil
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected a function definition or assignment after local
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrNameLFunc
+s = [=[
+local function() return 0 end
+]=]
+e = [=[
+test.lua:1:15: syntax error, expected a function name after 'function'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local function 3dprint(x, y, z) end
+]=]
+e = [=[
+test.lua:1:16: syntax error, expected a function name after 'function'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local function repeat(f, ntimes) for i = 1,ntimes do f() end end
+]=]
+e = [=[
+test.lua:1:16: syntax error, expected a function name after 'function'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEListLAssign
+s = [=[
+local x = ?
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected one or more expressions after '='
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEqAssign
+s = [=[
+x;
+]=]
+e = [=[
+test.lua:1:2: syntax error, expected '=' after the variable(s) to make an assignment
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+a, b, c
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected '=' after the variable(s) to make an assignment
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local x = 42 // the meaning of life
+]=]
+e = [=[
+test.lua:1:29: syntax error, expected '=' after the variable(s) to make an assignment
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+let x = 2
+]=]
+e = [=[
+test.lua:1:5: syntax error, expected '=' after the variable(s) to make an assignment
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+if p then
+  f()
+elif q then
+  g()
+end
+]=]
+e = [=[
+test.lua:3:6: syntax error, expected '=' after the variable(s) to make an assignment
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo()
+  bar()
+emd
+]=]
+e = [=[
+test.lua:4:1: syntax error, expected '=' after the variable(s) to make an assignment
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEListAssign
+s = [=[
+x = ?
+]=]
+e = [=[
+test.lua:1:5: syntax error, expected one or more expressions after '='
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrFuncName
+s = [=[
+function() return 0 end
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected a function name after 'function'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function 3dprint(x, y, z) end
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected a function name after 'function'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function repeat(f, ntimes) for i = 1,ntimes do f() end end
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected a function name after 'function'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrNameFunc1
+s = [=[
+function foo.() end
+]=]
+e = [=[
+test.lua:1:14: syntax error, expected a function name after '.'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo.1() end
+]=]
+e = [=[
+test.lua:1:14: syntax error, expected a function name after '.'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x.
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected a field name after '.'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrNameFunc2
+s = [=[
+function foo:() end
+]=]
+e = [=[
+test.lua:1:14: syntax error, expected a method name after ':'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo:1() end
+]=]
+e = [=[
+test.lua:1:14: syntax error, expected a method name after ':'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x := 0
+]=]
+e = [=[
+test.lua:1:4: syntax error, expected a method name after ':'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrOParenPList
+s = [=[
+function foo
+  return bar
+end
+]=]
+e = [=[
+test.lua:2:3: syntax error, expected '(' for the parameter list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo?(bar)
+  return bar
+end
+]=]
+e = [=[
+test.lua:1:13: syntax error, expected '(' for the parameter list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCParenPList
+s = [=[
+function foo(bar
+  return bar
+end
+]=]
+e = [=[
+test.lua:2:3: syntax error, expected ')' to close the parameter list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo(bar; baz)
+  return bar
+end
+]=]
+e = [=[
+test.lua:1:17: syntax error, expected ')' to close the parameter list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo(a, b, ...rest) end
+]=]
+e = [=[
+test.lua:1:23: syntax error, expected ')' to close the parameter list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEndFunc
+s = [=[
+function foo(bar)
+  return bar
+]=]
+e = [=[
+test.lua:3:1: syntax error, expected 'end' to close the function body
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function foo() do
+  bar()
+end
+]=]
+e = [=[
+test.lua:4:1: syntax error, expected 'end' to close the function body
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrParList
+s = [=[
+function foo(bar, baz,)
+  return bar
+end
+]=]
+e = [=[
+test.lua:1:23: syntax error, expected a variable name or '...' after ','
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrLabel
+s = [=[
+::1::
+]=]
+e = [=[
+test.lua:1:3: syntax error, expected a label name after '::'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCloseLabel
+s = [=[
+::loop
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected '::' after the label
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrGoto
+s = [=[
+goto;
+]=]
+e = [=[
+test.lua:1:5: syntax error, expected a label after 'goto'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+goto 1
+]=]
+e = [=[
+test.lua:1:6: syntax error, expected a label after 'goto'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrRetList
+s = [=[
+return a, b, 
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected an expression after ',' in the return statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrVarList
+s = [=[
+x, y, = 0, 0
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected a variable name after ','
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprList
+s = [=[
+x, y = 0, 0,
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected an expression after ','
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrOrExpr
+s = [=[
+foo(a or)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after 'or'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a or $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after 'or'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrAndExpr
+s = [=[
+foo(a and)
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after 'and'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a and $b
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected an expression after 'and'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrRelExpr
+s = [=[
+foo(a <)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a < $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a <=)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a <= $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a >)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a > $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a >=)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a >= $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a ==)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a == $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a ~=)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a ~= $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the relational operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrBOrExpr
+s = [=[
+foo(a |)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after '|'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a | $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after '|'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrBXorExpr
+s = [=[
+foo(a ~)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after '~'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a ~ $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after '~'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrBAndExpr
+s = [=[
+foo(a &)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after '&'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a & $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after '&'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrShiftExpr
+s = [=[
+foo(a >>)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the bit shift
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a >> $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the bit shift
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a <<)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the bit shift
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a >> $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the bit shift
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a >>> b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the bit shift
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrConcatExpr
+s = [=[
+foo(a ..)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after '..'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a .. $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after '..'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrAddExpr
+s = [=[
+foo(a +, b)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after the additive operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a + $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the additive operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a -, b)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after the additive operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a - $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the additive operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+arr[i++]
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected an expression after the additive operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrMulExpr
+s = [=[
+foo(b, a *)
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a * $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(b, a /)
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a / $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(b, a //)
+]=]
+e = [=[
+test.lua:1:12: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a // $b
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(b, a %)
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a % $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after the multiplicative operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrUnaryExpr
+s = [=[
+x, y = a + not, b
+]=]
+e = [=[
+test.lua:1:15: syntax error, expected an expression after the unary operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x, y = a + -, b
+]=]
+e = [=[
+test.lua:1:13: syntax error, expected an expression after the unary operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x, y = a + #, b
+]=]
+e = [=[
+test.lua:1:13: syntax error, expected an expression after the unary operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x, y = a + ~, b
+]=]
+e = [=[
+test.lua:1:13: syntax error, expected an expression after the unary operator
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrPowExpr
+s = [=[
+foo(a ^)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected an expression after '^'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x = a ^ $b
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected an expression after '^'
+]=]
+
+r = parse(s)
+-- assert(r == e)
+
+-- ErrExprParen
+s = [=[
+x = ()
+]=]
+e = [=[
+test.lua:1:6: syntax error, expected an expression after '('
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+y = (???)
+]=]
+e = [=[
+test.lua:1:6: syntax error, expected an expression after '('
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCParenExpr
+s = [=[
+z = a*(b+c
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected ')' to close the expression
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+w = (0xBV)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected ')' to close the expression
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+ans = 2^(m*(n-1)
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected ')' to close the expression
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrNameIndex
+s = [=[
+f = t.
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected a field name after '.'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+f = t.['f']
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected a field name after '.'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprIndex
+s = [=[
+f = t[]
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected an expression after '['
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+f = t[?]
+]=]
+e = [=[
+test.lua:1:7: syntax error, expected an expression after '['
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCBracketIndex
+s = [=[
+f = t[x[y]
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected ']' to close the indexing expression
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+f = t[x,y]
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected ']' to close the indexing expression
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+arr[i--]
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected ']' to close the indexing expression
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrNameMeth
+s = [=[
+x = obj:
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected a method name after ':'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+obj::hello()
+]=]
+e = [=[
+test.lua:1:5: syntax error, expected a method name after ':'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrMethArgs
+s = [=[
+cow:moo
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected some arguments for the method call (or '()')
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+dog:bark msg
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected some arguments for the method call (or '()')
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+duck:quack[4]
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected some arguments for the method call (or '()')
+]=]
+
+r = parse(s)
+assert(r == e)
+
+
+-- ErrArgList
+s = [=[
+foo(a, b, )
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected an expression after ',' in the argument list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(a, b, ..)
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected an expression after ',' in the argument list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCParenArgs
+s = [=[
+foo(a + (b - c)
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected ')' to close the argument list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+foo(arg1 arg2)
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected ')' to close the argument list
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCBraceTable
+s = [=[
+nums = {1, 2, 3]
+]=]
+e = [=[
+test.lua:1:16: syntax error, expected '}' to close the table constructor
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEqField
+s = [=[
+words2nums = { ['one'] -> 1 }
+]=]
+e = [=[
+test.lua:1:24: syntax error, expected '=' after the table key
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprField
+s = [=[
+words2nums = { ['one'] => 2 }
+]=]
+e = [=[
+test.lua:1:25: syntax error, expected an expression after '='
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrExprFKey
+s = [=[
+table = { [] = value }
+]=]
+e = [=[
+test.lua:1:12: syntax error, expected an expression after '[' for the table key
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCBracketFKey
+s = [=[
+table = { [key = value }
+]=]
+e = [=[
+test.lua:1:16: syntax error, expected ']' to close the table key
+]=]
+
+r = parse(s)
+assert(r == e)
+
+
+-- ErrDigitHex
+s = [=[
+print(0x)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected one or more hexadecimal digits after '0x'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print(0xGG)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected one or more hexadecimal digits after '0x'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDigitDeci
+s = [=[
+print(1 + . 0625)
+]=]
+e = [=[
+test.lua:1:12: syntax error, expected one or more digits after the decimal point
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print(.)
+]=]
+e = [=[
+test.lua:1:8: syntax error, expected one or more digits after the decimal point
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDigitExpo
+s = [=[
+print(1.0E)
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected one or more digits for the exponent
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print(3E)
+]=]
+e = [=[
+test.lua:1:9: syntax error, expected one or more digits for the exponent
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDQuote
+s = [=[
+local message = "Hello
+]=]
+e = [=[
+test.lua:2:1: syntax error, unclosed string
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local message = "*******
+Welcome
+*******"
+]=]
+e = [=[
+test.lua:2:1: syntax error, unclosed string
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrSQuote
+s = [=[
+local message = 'Hello
+]=]
+e = [=[
+test.lua:2:1: syntax error, unclosed string
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+local message = '*******
+Welcome
+*******'
+]=]
+e = [=[
+test.lua:2:1: syntax error, unclosed string
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrHexEsc
+s = [=[
+print("\x")
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected exactly two hexadecimal digits after '\x'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print("\xF")
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected exactly two hexadecimal digits after '\x'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print("\xG")
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected exactly two hexadecimal digits after '\x'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrOBraceUEsc
+s = [=[
+print("\u3D")
+]=]
+e = [=[
+test.lua:1:10: syntax error, expected '{' after '\u'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrDigitUEsc
+s = [=[
+print("\u{}")
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected one or more hexadecimal digits for the UTF-8 code point
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print("\u{XD}")
+]=]
+e = [=[
+test.lua:1:11: syntax error, expected one or more hexadecimal digits for the UTF-8 code point
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCBraceUEsc
+s = [=[
+print("\u{0x3D}")
+]=]
+e = [=[
+test.lua:1:12: syntax error, expected '}' after the code point
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+print("\u{FFFF Hi")
+]=]
+e = [=[
+test.lua:1:15: syntax error, expected '}' after the code point
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrEscSeq
+s = [=[
+print("\m")
+]=]
+e = [=[
+test.lua:1:9: syntax error, invalid escape sequence
+]=]
+
+r = parse(s)
+assert(r == e)
+
+-- ErrCloseLStr
+s = [===[
+local message = [==[
+    *******
+    WELCOME
+    *******
+]=]
+]===]
+e = [=[
+test.lua:6:1: syntax error, unclosed long string
+]=]
+
+r = parse(s)
+assert(r == e)
+
 print("OK")
