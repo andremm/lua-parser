@@ -996,6 +996,18 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
+s = [=[
+local x = glob
+::label::
+foo()
+]=]
+e = [=[
+{ `Local{ { `Id "x" }, { `Id "glob" } }, `Label{ "label" }, `Call{ `Id "foo" } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
 end
 
 -- locals
@@ -1831,6 +1843,8 @@ assert(r == e)
 
 end
 
+if not metalua then
+
 print("> testing more syntax errors...")
 
 -- ErrExtra
@@ -1849,6 +1863,24 @@ while foo do if bar then baz() end end end
 ]=]
 e = [=[
 test.lua:1:40: syntax error, unexpected character(s), expected EOF
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+function qux()
+  if false then
+    -- do
+    return 0
+    end
+  end
+  return 1
+end
+print(qux())
+]=]
+e = [=[
+test.lua:8:1: syntax error, unexpected character(s), expected EOF
 ]=]
 
 r = parse(s)
@@ -1888,6 +1920,16 @@ y = 2
 ]=]
 e = [=[
 test.lua:2:3: syntax error, unexpected token, invalid start of statement
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+obj::hello()
+]=]
+e = [=[
+test.lua:1:1: syntax error, unexpected token, invalid start of statement
 ]=]
 
 r = parse(s)
@@ -3322,16 +3364,6 @@ test.lua:2:1: syntax error, expected a method name after ':'
 r = parse(s)
 assert(r == e)
 
-s = [=[
-obj::hello()
-]=]
-e = [=[
-test.lua:1:5: syntax error, expected a method name after ':'
-]=]
-
-r = parse(s)
-assert(r == e)
-
 -- ErrMethArgs
 s = [=[
 cow:moo
@@ -3363,6 +3395,18 @@ test.lua:1:11: syntax error, expected some arguments for the method call (or '()
 r = parse(s)
 assert(r == e)
 
+s = [=[
+local t = {
+  x = X:
+  y = Y;
+}
+]=]
+e = [=[
+test.lua:3:5: syntax error, expected some arguments for the method call (or '()')
+]=]
+
+r = parse(s)
+assert(r == e)
 
 -- ErrArgList
 s = [=[
@@ -3412,6 +3456,21 @@ nums = {1, 2, 3]
 ]=]
 e = [=[
 test.lua:1:16: syntax error, expected '}' to close the table constructor
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+nums = {
+  one = 1;
+  two = 2
+  three = 3;
+  four = 4
+}
+]=]
+e = [=[
+test.lua:4:3: syntax error, expected '}' to close the table constructor
 ]=]
 
 r = parse(s)
@@ -3679,5 +3738,7 @@ test.lua:6:1: syntax error, unclosed long string
 
 r = parse(s)
 assert(r == e)
+
+end
 
 print("OK")

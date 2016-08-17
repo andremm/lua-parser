@@ -352,7 +352,7 @@ local G = { V"Lua",
   PrimaryExpr   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExprParen") * expect(sym(")"), "CParenExpr"));
   Index         = tagC("DotIndex", sym("." * -P".") * expect(V"StrId", "NameIndex"))
                 + tagC("ArrayIndex", sym("[" * -P(S"=[")) * expect(V"Expr", "ExprIndex") * expect(sym("]"), "CBracketIndex"));
-  Call          = tagC("Invoke", Cg(sym(":") * expect(V"StrId", "NameMeth") * expect(V"FuncArgs", "MethArgs")))
+  Call          = tagC("Invoke", Cg(sym(":" * -P":") * expect(V"StrId", "NameMeth") * expect(V"FuncArgs", "MethArgs")))
                 + tagC("Call", V"FuncArgs");
 
   FuncDef   = kw("function") * V"FuncBody";
