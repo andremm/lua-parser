@@ -282,6 +282,20 @@ assert(r == e)
 s = [=[
 -- short string test begin
 
+lf = "\\n"
+
+-- short string test end
+]=]
+e = [=[
+{ `Set{ { `Id "lf" }, { `String "\\n" } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+-- short string test begin
+
 ss5_a = "ola \
 mundo \\ \
 cruel"
@@ -1869,6 +1883,18 @@ r = parse(s)
 assert(r == e)
 
 s = [=[
+local func f()
+  g()
+end
+]=]
+e = [=[
+test.lua:3:1: syntax error, unexpected character(s), expected EOF
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
 function qux()
   if false then
     -- do
@@ -2522,16 +2548,6 @@ test.lua:1:14: syntax error, expected a function name after '.'
 r = parse(s)
 assert(r == e)
 
-s = [=[
-x.
-]=]
-e = [=[
-test.lua:2:1: syntax error, expected a field name after '.'
-]=]
-
-r = parse(s)
-assert(r == e)
-
 -- ErrNameFunc2
 s = [=[
 function foo:() end
@@ -2548,16 +2564,6 @@ function foo:1() end
 ]=]
 e = [=[
 test.lua:1:14: syntax error, expected a method name after ':'
-]=]
-
-r = parse(s)
-assert(r == e)
-
-s = [=[
-x := 0
-]=]
-e = [=[
-test.lua:1:4: syntax error, expected a method name after ':'
 ]=]
 
 r = parse(s)
@@ -3301,6 +3307,16 @@ test.lua:1:7: syntax error, expected a field name after '.'
 r = parse(s)
 assert(r == e)
 
+s = [=[
+x.
+]=]
+e = [=[
+test.lua:2:1: syntax error, expected a field name after '.'
+]=]
+
+r = parse(s)
+assert(r == e)
+
 -- ErrExprIndex
 s = [=[
 f = t[]
@@ -3359,6 +3375,16 @@ x = obj:
 ]=]
 e = [=[
 test.lua:2:1: syntax error, expected a method name after ':'
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [=[
+x := 0
+]=]
+e = [=[
+test.lua:1:4: syntax error, expected a method name after ':'
 ]=]
 
 r = parse(s)
