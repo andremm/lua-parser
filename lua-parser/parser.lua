@@ -423,7 +423,10 @@ local G = { V"Lua",
            + P"u" * expect("{", "OBraceUEsc")
                   * expect(C(xdigit^1), "DigitUEsc") * Cc(16)
                   * expect("}", "CBraceUEsc")
-                  / tonumber / string.char  -- true max is \u{10FFFF}
+                  / tonumber 
+                  / (utf8 and utf8.char or string.char)  -- true max is \u{10FFFF}
+                                                         -- utf8.char needs Lua 5.3
+                                                         -- string.char works only until \u{FF}
 
            + throw("EscSeq")
            );
