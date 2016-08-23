@@ -2269,10 +2269,10 @@ assert(r == e)
 
 -- ErrUntilRep
 s = [=[
-repeat play_song() while on_repeat
+repeat play_song()
 ]=]
 e = [=[
-test.lua:2:1: syntax error, expected 'do' after the condition
+test.lua:2:1: syntax error, expected 'until' at the end of the repeat loop
 ]=]
 
 r = parse(s)
