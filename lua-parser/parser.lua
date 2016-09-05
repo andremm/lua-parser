@@ -1,5 +1,5 @@
 --[[
-This module implements a parser for Lua 5.2 with LPeg,
+This module implements a parser for Lua 5.3 with LPeg,
 and generates an Abstract Syntax Tree in the Metalua format.
 For more information about Metalua, please, visit:
 https://github.com/fab13n/metalua-parser
@@ -7,7 +7,7 @@ https://github.com/fab13n/metalua-parser
 block: { stat* }
 
 stat:
-  `Do{ stat* }
+    `Do{ stat* }
   | `Set{ {lhs+} {expr+} }                    -- lhs1, lhs2... = e1, e2...
   | `While{ expr block }                      -- while e do b end
   | `Repeat{ block expr }                     -- repeat b until e
@@ -23,7 +23,7 @@ stat:
   | apply
 
 expr:
-  `Nil
+    `Nil
   | `Dots
   | `True
   | `False
@@ -37,789 +37,449 @@ expr:
   | lhs
 
 apply:
-  `Call{ expr expr* }
+    `Call{ expr expr* }
   | `Invoke{ expr `String{ <string> } expr* }
 
 lhs: `Id{ <string> } | `Index{ expr expr }
 
-opid: 'add' | 'sub' | 'mul' | 'div' | 'idiv' | 'mod' | 'pow' | 'concat'
-  | 'band' | 'bor' | 'bxor' | 'shl' | 'shr' | 'eq' | 'lt' | 'le'
-  | 'and' | 'or' | 'not' | 'unm' | 'len' | 'bnot'
+opid:  -- includes additional operators from Lua 5.3
+    'add'  | 'sub' | 'mul'  | 'div'
+  | 'idiv' | 'mod' | 'pow'  | 'concat'
+  | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
+  | 'eq'   | 'lt'  | 'le'   | 'and' | 'or'
+  | 'unm'  | 'len' | 'bnot' | 'not'
 ]]
-local parser = {}
 
-local lpeg = require "lpeg"
-local scope = require "lua-parser.scope"
+local lpeg = require "lpeglabel"
 
 lpeg.locale(lpeg)
 
 local P, S, V = lpeg.P, lpeg.S, lpeg.V
 local C, Carg, Cb, Cc = lpeg.C, lpeg.Carg, lpeg.Cb, lpeg.Cc
-local Cf, Cg, Cmt, Cp, Ct = lpeg.Cf, lpeg.Cg, lpeg.Cmt, lpeg.Cp, lpeg.Ct
+local Cf, Cg, Cmt, Cp, Cs, Ct = lpeg.Cf, lpeg.Cg, lpeg.Cmt, lpeg.Cp, lpeg.Cs, lpeg.Ct
+local Lc, T = lpeg.Lc, lpeg.T
+
 local alpha, digit, alnum = lpeg.alpha, lpeg.digit, lpeg.alnum
 local xdigit = lpeg.xdigit
 local space = lpeg.space
 
-local lineno = scope.lineno
-local new_scope, end_scope = scope.new_scope, scope.end_scope
-local new_function, end_function = scope.new_function, scope.end_function
-local begin_loop, end_loop = scope.begin_loop, scope.end_loop
-local insideloop = scope.insideloop
 
 -- error message auxiliary functions
 
--- creates an error message for the input string
-local function syntaxerror (errorinfo, pos, msg)
-  local l, c = lineno(errorinfo.subject, pos)
-  local error_msg = "%s:%d:%d: syntax error, %s"
-  return string.format(error_msg, errorinfo.filename, l, c, msg)
-end
+local labels = {
+  { "ErrExtra", "unexpected character(s), expected EOF" },
+  { "ErrInvalidStat", "unexpected token, invalid start of statement" },
 
--- gets the farthest failure position
-local function getffp (s, i, t)
-  return t.ffp or i, t
-end
+  { "ErrEndIf", "expected 'end' to close the if statement" },
+  { "ErrExprIf", "expected a condition after 'if'" },
+  { "ErrThenIf", "expected 'then' after the condition" },
+  { "ErrExprEIf", "expected a condition after 'elseif'" },
+  { "ErrThenEIf", "expected 'then' after the condition" },
 
--- gets the table that contains the error information
-local function geterrorinfo ()
-  return Cmt(Carg(1), getffp) * (C(V"OneWord") + Cc("EOF")) /
-  function (t, u)
-    t.unexpected = u
-    return t
-  end
-end
+  { "ErrEndDo", "expected 'end' to close the do block" },
+  { "ErrExprWhile", "expected a condition after 'while'" },
+  { "ErrDoWhile", "expected 'do' after the condition" },
+  { "ErrEndWhile", "expected 'end' to close the while loop" },
+  { "ErrUntilRep", "expected 'until' at the end of the repeat loop" },
+  { "ErrExprRep", "expected a conditions after 'until'" },
 
--- creates an errror message using the farthest failure position
-local function errormsg ()
-  return geterrorinfo() /
-  function (t)
-    local p = t.ffp or 1
-    local msg = "unexpected '%s', expecting %s"
-    msg = string.format(msg, t.unexpected, t.expected)
-    return nil, syntaxerror(t, p, msg)
-  end
-end
+  { "ErrForRange", "expected a numeric or generic range after 'for'" },
+  { "ErrEndFor", "expected 'end' to close the for loop" },
+  { "ErrExprFor1", "expected a starting expression for the numeric range" },
+  { "ErrCommaFor", "expected ',' to split the start and end of the range" },
+  { "ErrExprFor2", "expected an ending expression for the numeric range" },
+  { "ErrExprFor3", "expected a step expression for the numeric range after ','" },
+  { "ErrInFor", "expected '=' or 'in' after the variable(s)" },
+  { "ErrEListFor", "expected one or more expressions after 'in'" },
+  { "ErrDoFor", "expected 'do' after the range of the for loop" },
 
--- reports a syntactic error
-local function report_error ()
-  return errormsg()
-end
+  { "ErrDefLocal", "expected a function definition or assignment after local" },
+  { "ErrNameLFunc", "expected a function name after 'function'" },
+  { "ErrEListLAssign", "expected one or more expressions after '='" },
+  { "ErrEListAssign", "expected one or more expressions after '='" },
 
--- sets the farthest failure position and the expected tokens
-local function setffp (s, i, t, n)
-  if not t.ffp or i > t.ffp then
-    t.ffp = i
-    t.list = {} ; t.list[n] = n
-    t.expected = "'" .. n .. "'"
-  elseif i == t.ffp then
-    if not t.list[n] then
-      t.list[n] = n
-      t.expected = "'" .. n .. "', " .. t.expected
+  { "ErrFuncName", "expected a function name after 'function'" },
+  { "ErrNameFunc1", "expected a function name after '.'" },
+  { "ErrNameFunc2", "expected a method name after ':'" },
+  { "ErrOParenPList", "expected '(' for the parameter list" },
+  { "ErrCParenPList", "expected ')' to close the parameter list" },
+  { "ErrEndFunc", "expected 'end' to close the function body" },
+  { "ErrParList", "expected a variable name or '...' after ','" },
+
+  { "ErrLabel", "expected a label name after '::'" },
+  { "ErrCloseLabel", "expected '::' after the label" },
+  { "ErrGoto", "expected a label after 'goto'" },
+  { "ErrRetList", "expected an expression after ',' in the return statement" },
+
+  { "ErrVarList", "expected a variable name after ','" },
+  { "ErrExprList", "expected an expression after ','" },
+
+  { "ErrOrExpr", "expected an expression after 'or'" },
+  { "ErrAndExpr", "expected an expression after 'and'" },
+  { "ErrRelExpr", "expected an expression after the relational operator" },
+  { "ErrBOrExpr", "expected an expression after '|'" },
+  { "ErrBXorExpr", "expected an expression after '~'" },
+  { "ErrBAndExpr", "expected an expression after '&'" },
+  { "ErrShiftExpr", "expected an expression after the bit shift" },
+  { "ErrConcatExpr", "expected an expression after '..'" },
+  { "ErrAddExpr", "expected an expression after the additive operator" },
+  { "ErrMulExpr", "expected an expression after the multiplicative operator" },
+  { "ErrUnaryExpr", "expected an expression after the unary operator" },
+  { "ErrPowExpr", "expected an expression after '^'" },
+
+  { "ErrExprParen", "expected an expression after '('" },
+  { "ErrCParenExpr", "expected ')' to close the expression" },
+  { "ErrNameIndex", "expected a field name after '.'" },
+  { "ErrExprIndex", "expected an expression after '['" },
+  { "ErrCBracketIndex", "expected ']' to close the indexing expression" },
+  { "ErrNameMeth", "expected a method name after ':'" },
+  { "ErrMethArgs", "expected some arguments for the method call (or '()')" },
+
+  { "ErrArgList", "expected an expression after ',' in the argument list" },
+  { "ErrCParenArgs", "expected ')' to close the argument list" },
+
+  { "ErrCBraceTable", "expected '}' to close the table constructor" },
+  { "ErrEqField", "expected '=' after the table key" },
+  { "ErrExprField", "expected an expression after '='" },
+  { "ErrExprFKey", "expected an expression after '[' for the table key" },
+  { "ErrCBracketFKey", "expected ']' to close the table key" },
+
+  { "ErrDigitHex", "expected one or more hexadecimal digits after '0x'" },
+  { "ErrDigitDeci", "expected one or more digits after the decimal point" },
+  { "ErrDigitExpo", "expected one or more digits for the exponent" },
+
+  { "ErrQuote", "unclosed string" },
+  { "ErrHexEsc", "expected exactly two hexadecimal digits after '\\x'" },
+  { "ErrOBraceUEsc", "expected '{' after '\\u'" },
+  { "ErrDigitUEsc", "expected one or more hexadecimal digits for the UTF-8 code point" },
+  { "ErrCBraceUEsc", "expected '}' after the code point" },
+  { "ErrEscSeq", "invalid escape sequence" },
+  { "ErrCloseLStr", "unclosed long string" },
+}
+
+local function throw(label)
+  label = "Err" .. label
+  for i, labelinfo in ipairs(labels) do
+    if labelinfo[1] == label then
+      return T(i)
     end
   end
-  return false
+
+  error("Label not found: " .. label)
 end
 
-local function updateffp (name)
-  return Cmt(Carg(1) * Cc(name), setffp)
+local function expect (patt, label)
+  return patt + throw(label)
 end
+
 
 -- regular combinators and auxiliary functions
 
-local function token (pat, name)
-  return pat * V"Skip" + updateffp(name) * P(false)
+local function token (patt)
+  return patt * V"Skip"
 end
 
-local function symb (str)
-  return token (P(str), str)
+local function sym (str)
+  return token(P(str))
 end
 
 local function kw (str)
-  return token (P(str) * -V"idRest", str)
+  return token(P(str) * -V"IdRest")
 end
 
-local function taggedCap (tag, pat)
-  return Ct(Cg(Cp(), "pos") * Cg(Cc(tag), "tag") * pat)
+local function tagC (tag, patt)
+  return Ct(Cg(Cp(), "pos") * Cg(Cc(tag), "tag") * patt)
 end
 
-local function unaryop (op, e)
+local function unaryOp (op, e)
   return { tag = "Op", pos = e.pos, [1] = op, [2] = e }
 end
 
-local function binaryop (e1, op, e2)
+local function binaryOp (e1, op, e2)
   if not op then
     return e1
-  elseif op == "add" or
-         op == "sub" or
-         op == "mul" or
-         op == "div" or
-         op == "idiv" or
-         op == "mod" or
-         op == "pow" or
-         op == "concat" or
-         op == "band" or
-         op == "bor" or
-         op == "bxor" or
-         op == "shl" or
-         op == "shr" or
-         op == "eq" or
-         op == "lt" or
-         op == "le" or
-         op == "and" or
-         op == "or" then
-    return { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
-  elseif op == "ne" then
-    return unaryop ("not", { tag = "Op", pos = e1.pos, [1] = "eq", [2] = e1, [3] = e2 })
+  end
+
+  local node = { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
+
+  if op == "ne" then
+    node[1] = "eq"
+    node = unaryOp("not", node)
   elseif op == "gt" then
-    return { tag = "Op", pos = e1.pos, [1] = "lt", [2] = e2, [3] = e1 }
+    node[1], node[2], node[3] = "lt", e2, e1
   elseif op == "ge" then
-    return { tag = "Op", pos = e1.pos, [1] = "le", [2] = e2, [3] = e1 }
+    node[1], node[2], node[3] = "le", e2, e1
+  end
+
+  return node
+end
+
+local function sepBy (patt, sep, label)
+  if label then
+    return patt * Cg(sep * expect(patt, label))^0
+  else
+    return patt * Cg(sep * patt)^0
   end
 end
 
-local function chainl (pat, sep, a)
-  return Cf(pat * Cg(sep * pat)^0, binaryop) + a
+local function chainOp (patt, sep, label)
+  return Cf(sepBy(patt, sep, label), binaryOp)
 end
 
-local function chainl1 (pat, sep)
-  return Cf(pat * Cg(sep * pat)^0, binaryop)
+local function commaSep (patt, label)
+  return sepBy(patt, sym(","), label)
 end
 
-local function sepby (pat, sep, tag)
-  return taggedCap(tag, (pat * (sep * pat)^0)^-1)
+local function tagDo (block)
+  block.tag = "Do"
+  return block
 end
 
-local function sepby1 (pat, sep, tag)
-  return taggedCap(tag, pat * (sep * pat)^0)
+local function fixFuncStat (func)
+  if func[1].is_method then table.insert(func[2][1], 1, { tag = "Id", [1] = "self" }) end
+  func[1] = {func[1]}
+  func[2] = {func[2]}
+  return func
 end
 
-local function fix_str (str)
-  str = string.gsub(str, "\\a", "\a")
-  str = string.gsub(str, "\\b", "\b")
-  str = string.gsub(str, "\\f", "\f")
-  str = string.gsub(str, "\\n", "\n")
-  str = string.gsub(str, "\\r", "\r")
-  str = string.gsub(str, "\\t", "\t")
-  str = string.gsub(str, "\\v", "\v")
-  str = string.gsub(str, "\\\n", "\n")
-  str = string.gsub(str, "\\\r", "\n")
-  str = string.gsub(str, "\\'", "'")
-  str = string.gsub(str, '\\"', '"')
-  str = string.gsub(str, '\\\\', '\\')
-  return str
+local function addDots (params, dots)
+  if dots then table.insert(params, dots) end
+  return params
+end
+
+local function insertIndex (t, index)
+  return { tag = "Index", pos = t.pos, [1] = t, [2] = index }
+end
+
+local function markMethod(t, method)
+  if method then
+    return { tag = "Index", pos = t.pos, is_method = true, [1] = t, [2] = method }
+  end
+  return t
+end
+
+local function makeIndexOrCall (t1, t2)
+  if t2.tag == "Call" or t2.tag == "Invoke" then
+    local t = { tag = t2.tag, pos = t1.pos, [1] = t1 }
+    for k, v in ipairs(t2) do
+      table.insert(t, v)
+    end
+    return t
+  end
+  return { tag = "Index", pos = t1.pos, [1] = t1, [2] = t2[1] }
 end
 
 -- grammar
-
 local G = { V"Lua",
-  Lua = V"Shebang"^-1 * V"Skip" * V"Chunk" * -1 + report_error();
-  -- parser
-  Chunk = V"Block";
-  StatList = (symb(";") + V"Stat")^0;
-  Var = V"Id";
-  Id = taggedCap("Id", token(V"Name", "Name"));
-  FunctionDef = kw("function") * V"FuncBody";
-  FieldSep = symb(",") + symb(";");
-  Field = taggedCap("Pair", (symb("[") * V"Expr" * symb("]") * symb("=") * V"Expr") +
-                    (taggedCap("String", token(V"Name", "Name")) * symb("=") * V"Expr")) +
-          V"Expr";
-  FieldList = (V"Field" * (V"FieldSep" * V"Field")^0 * V"FieldSep"^-1)^-1;
-  Constructor = taggedCap("Table", symb("{") * V"FieldList" * symb("}"));
-  NameList = sepby1(V"Id", symb(","), "NameList");
-  ExpList = sepby1(V"Expr", symb(","), "ExpList");
-  FuncArgs = symb("(") * (V"Expr" * (symb(",") * V"Expr")^0)^-1 * symb(")") +
-             V"Constructor" +
-             taggedCap("String", token(V"String", "String"));
-  Expr = V"SubExpr_1";
-  SubExpr_1 = chainl1(V"SubExpr_2", V"OrOp");
-  SubExpr_2 = chainl1(V"SubExpr_3", V"AndOp");
-  SubExpr_3 = chainl1(V"SubExpr_4", V"RelOp");
-  SubExpr_4 = chainl1(V"SubExpr_5", V"BOrOp");
-  SubExpr_5 = chainl1(V"SubExpr_6", V"BXorOp");
-  SubExpr_6 = chainl1(V"SubExpr_7", V"BAndOp");
-  SubExpr_7 = chainl1(V"SubExpr_8", V"ShiftOp");
-  SubExpr_8 = V"SubExpr_9" * V"ConOp" * V"SubExpr_8" / binaryop +
-              V"SubExpr_9";
-  SubExpr_9 = chainl1(V"SubExpr_10", V"AddOp");
-  SubExpr_10 = chainl1(V"SubExpr_11", V"MulOp");
-  SubExpr_11 = V"UnOp" * V"SubExpr_11" / unaryop +
-              V"SubExpr_12";
-  SubExpr_12 = V"SimpleExp" * (V"PowOp" * V"SubExpr_11")^-1 / binaryop;
-  SimpleExp = taggedCap("Number", token(V"Number", "Number")) +
-              taggedCap("String", token(V"String", "String")) +
-              taggedCap("Nil", kw("nil")) +
-              taggedCap("False", kw("false")) +
-              taggedCap("True", kw("true")) +
-              taggedCap("Dots", symb("...")) +
-              V"FunctionDef" +
-              V"Constructor" +
-              V"SuffixedExp";
-  SuffixedExp = Cf(V"PrimaryExp" * (
-                  taggedCap("DotIndex", symb(".") * taggedCap("String", token(V"Name", "Name"))) +
-                  taggedCap("ArrayIndex", symb("[") * V"Expr" * symb("]")) +
-                  taggedCap("Invoke", Cg(symb(":") * taggedCap("String", token(V"Name", "Name")) * V"FuncArgs")) +
-                  taggedCap("Call", V"FuncArgs")
-                )^0, function (t1, t2)
-                       if t2 then
-                         if t2.tag == "Call" or t2.tag == "Invoke" then
-                           local t = {tag = t2.tag, pos = t1.pos, [1] = t1}
-                           for k, v in ipairs(t2) do
-                             table.insert(t, v)
-                           end
-                           return t
-                         else
-                           return {tag = "Index", pos = t1.pos, [1] = t1, [2] = t2[1]}
-                         end
-                       end
-                       return t1
-                     end);
-  PrimaryExp = V"Var" +
-               taggedCap("Paren", symb("(") * V"Expr" * symb(")"));
-  Block = taggedCap("Block", V"StatList" * V"RetStat"^-1);
-  IfStat = taggedCap("If",
-             kw("if") * V"Expr" * kw("then") * V"Block" *
-             (kw("elseif") * V"Expr" * kw("then") * V"Block")^0 *
-             (kw("else") * V"Block")^-1 *
-             kw("end"));
-  WhileStat = taggedCap("While", kw("while") * V"Expr" *
-                kw("do") * V"Block" * kw("end"));
-  DoStat = kw("do") * V"Block" * kw("end") /
-           function (t)
-             t.tag = "Do"
-             return t
-           end;
-  ForBody = kw("do") * V"Block";
-  ForNum = taggedCap("Fornum",
-             V"Id" * symb("=") * V"Expr" * symb(",") *
-             V"Expr" * (symb(",") * V"Expr")^-1 *
-             V"ForBody");
-  ForGen = taggedCap("Forin", V"NameList" * kw("in") * V"ExpList" * V"ForBody");
-  ForStat = kw("for") * (V"ForNum" + V"ForGen") * kw("end");
-  RepeatStat = taggedCap("Repeat", kw("repeat") * V"Block" *
-                 kw("until") * V"Expr");
-  FuncName = Cf(V"Id" * (symb(".") * taggedCap("String", token(V"Name", "Name")))^0,
-             function (t1, t2)
-               if t2 then
-                 return {tag = "Index", pos = t1.pos, [1] = t1, [2] = t2}
-               end
-               return t1
-             end) * (symb(":") * taggedCap("String", token(V"Name", "Name")))^-1 /
-             function (t1, t2)
-               if t2 then
-                 return {tag = "Index", pos = t1.pos, is_method = true, [1] = t1, [2] = t2}
-               end
-               return t1
-             end;
-  ParList = V"NameList" * (symb(",") * symb("...") * taggedCap("Dots", Cp()))^-1 /
-            function (t, v)
-              if v then table.insert(t, v) end
-              return t
-            end +
-            symb("...") * taggedCap("Dots", Cp()) /
-            function (v)
-              return {v}
-            end +
-            P(true) / function () return {} end;
-  -- Cc({}) generates a strange bug when parsing [[function t:a() end ; function t.a() end]]
-  -- the bug is to add the parameter self to the second function definition
-  --FuncBody = taggedCap("Function", symb("(") * (V"ParList" + Cc({})) * symb(")") * V"Block" * kw("end"));
-  FuncBody = taggedCap("Function", symb("(") * V"ParList" * symb(")") * V"Block" * kw("end"));
-  FuncStat = taggedCap("Set", kw("function") * V"FuncName" * V"FuncBody") /
-             function (t)
-               if t[1].is_method then table.insert(t[2][1], 1, {tag = "Id", [1] = "self"}) end
-               t[1] = {t[1]}
-               t[2] = {t[2]}
-               return t
-             end;
-  LocalFunc = taggedCap("Localrec", kw("function") * V"Id" * V"FuncBody") /
-              function (t)
-                t[1] = {t[1]}
-                t[2] = {t[2]}
-                return t
-              end;
-  LocalAssign = taggedCap("Local", V"NameList" * ((symb("=") * V"ExpList") + Ct(Cc())));
-  LocalStat = kw("local") * (V"LocalFunc" + V"LocalAssign");
-  LabelStat = taggedCap("Label", symb("::") * token(V"Name", "Name") * symb("::"));
-  BreakStat = taggedCap("Break", kw("break"));
-  GoToStat = taggedCap("Goto", kw("goto") * token(V"Name", "Name"));
-  RetStat = taggedCap("Return", kw("return") * (V"Expr" * (symb(",") * V"Expr")^0)^-1 * symb(";")^-1);
-  ExprStat = Cmt(
-             (V"SuffixedExp" *
-                (Cc(function (...)
-                           local vl = {...}
-                           local el = vl[#vl]
-                           table.remove(vl)
-                           for k, v in ipairs(vl) do
-                             if v.tag == "Id" or v.tag == "Index" then
-                               vl[k] = v
-                             else
-                               -- invalid assignment
-                               return false
-                             end
-                           end
-                           vl.tag = "VarList"
-                           vl.pos = vl[1].pos
-                           return true, {tag = "Set", pos = vl.pos, [1] = vl, [2] = el}
-                         end) * V"Assignment"))
-             +
-             (V"SuffixedExp" *
-                (Cc(function (s)
-                           if s.tag == "Call" or
-                              s.tag == "Invoke" then
-                             return true, s
-                           end
-                           -- invalid statement
-                           return false
-                         end)))
-             , function (s, i, s1, f, ...) return f(s1, ...) end);
-  Assignment = ((symb(",") * V"SuffixedExp")^1)^-1 * symb("=") * V"ExpList";
-  Stat = V"IfStat" + V"WhileStat" + V"DoStat" + V"ForStat" +
-         V"RepeatStat" + V"FuncStat" + V"LocalStat" + V"LabelStat" +
-         V"BreakStat" + V"GoToStat" + V"ExprStat";
+  Lua      = V"Shebang"^-1 * V"Skip" * V"Block" * expect(P(-1), "Extra");
+  Shebang  = P"#!" * (P(1) - P"\n")^0;
+
+  Block       = tagC("Block", V"Stat"^0 * V"RetStat"^-1);
+  Stat        = V"IfStat" + V"DoStat" + V"WhileStat" + V"RepeatStat" + V"ForStat"
+              + V"LocalStat" + V"FuncStat" + V"BreakStat" + V"LabelStat" + V"GoToStat"
+              + V"FuncCall" + V"Assignment" + sym(";") + -V"BlockEnd" * throw("InvalidStat");
+  BlockEnd    = P"return" + "end" + "elseif" + "else" + "until" + -1;
+
+  IfStat      = tagC("If", V"IfPart" * V"ElseIfPart"^0 * V"ElsePart"^-1 * expect(kw("end"), "EndIf"));
+  IfPart      = kw("if") * expect(V"Expr", "ExprIf") * expect(kw("then"), "ThenIf") * V"Block";
+  ElseIfPart  = kw("elseif") * expect(V"Expr", "ExprEIf") * expect(kw("then"), "ThenEIf") * V"Block";
+  ElsePart    = kw("else") * V"Block";
+
+  DoStat      = kw("do") * V"Block" * expect(kw("end"), "EndDo") / tagDo;
+  WhileStat   = tagC("While", kw("while") * expect(V"Expr", "ExprWhile") * V"WhileBody");
+  WhileBody   = expect(kw("do"), "DoWhile") * V"Block" * expect(kw("end"), "EndWhile");
+  RepeatStat  = tagC("Repeat", kw("repeat") * V"Block" * expect(kw("until"), "UntilRep") * expect(V"Expr", "ExprRep"));
+
+  ForStat   = kw("for") * expect(V"ForNum" + V"ForIn", "ForRange") * expect(kw("end"), "EndFor");
+  ForNum    = tagC("Fornum", V"Id" * sym("=") * V"NumRange" * V"ForBody");
+  NumRange  = expect(V"Expr", "ExprFor1") * expect(sym(","), "CommaFor") *expect(V"Expr", "ExprFor2")
+            * (sym(",") * expect(V"Expr", "ExprFor3"))^-1;
+  ForIn     = tagC("Forin", V"NameList" * expect(kw("in"), "InFor") * expect(V"ExprList", "EListFor") * V"ForBody");
+  ForBody   = expect(kw("do"), "DoFor") * V"Block";
+
+  LocalStat    = kw("local") * expect(V"LocalFunc" + V"LocalAssign", "DefLocal");
+  LocalFunc    = tagC("Localrec", kw("function") * expect(V"Id", "NameLFunc") * V"FuncBody") / fixFuncStat;
+  LocalAssign  = tagC("Local", V"NameList" * (sym("=") * expect(V"ExprList", "EListLAssign") + Ct(Cc())));
+  Assignment   = tagC("Set", V"VarList" * sym("=") * expect(V"ExprList", "EListAssign"));
+
+  FuncStat    = tagC("Set", kw("function") * expect(V"FuncName", "FuncName") * V"FuncBody") / fixFuncStat;
+  FuncName    = Cf(V"Id" * (sym(".") * expect(V"StrId", "NameFunc1"))^0, insertIndex)
+              * (sym(":") * expect(V"StrId", "NameFunc2"))^-1 / markMethod;
+  FuncBody    = tagC("Function", V"FuncParams" * V"Block" * expect(kw("end"), "EndFunc"));
+  FuncParams  = expect(sym("("), "OParenPList") * V"ParList" * expect(sym(")"), "CParenPList");
+  ParList     = V"NameList" * (sym(",") * expect(tagC("Dots", sym("...")), "ParList"))^-1 / addDots
+              + Ct(tagC("Dots", sym("...")))
+              + Ct(Cc()); -- Cc({}) generates a bug since the {} would be shared across parses
+
+  LabelStat  = tagC("Label", sym("::") * expect(V"Name", "Label") * expect(sym("::"), "CloseLabel"));
+  GoToStat   = tagC("Goto", kw("goto") * expect(V"Name", "Goto"));
+  BreakStat  = tagC("Break", kw("break"));
+  RetStat    = tagC("Return", kw("return") * commaSep(V"Expr", "RetList")^-1 * sym(";")^-1);
+
+  NameList  = tagC("NameList", commaSep(V"Id"));
+  VarList   = tagC("VarList", commaSep(V"VarExpr", "VarList"));
+  ExprList  = tagC("ExpList", commaSep(V"Expr", "ExprList"));
+
+  Expr        = V"OrExpr";
+  OrExpr      = chainOp(V"AndExpr", V"OrOp", "OrExpr");
+  AndExpr     = chainOp(V"RelExpr", V"AndOp", "AndExpr");
+  RelExpr     = chainOp(V"BOrExpr", V"RelOp", "RelExpr");
+  BOrExpr     = chainOp(V"BXorExpr", V"BOrOp", "BOrExpr");
+  BXorExpr    = chainOp(V"BAndExpr", V"BXorOp", "BXorExpr");
+  BAndExpr    = chainOp(V"ShiftExpr", V"BAndOp", "BAndExpr");
+  ShiftExpr   = chainOp(V"ConcatExpr", V"ShiftOp", "ShiftExpr");
+  ConcatExpr  = V"AddExpr" * (V"ConcatOp" * expect(V"ConcatExpr", "ConcatExpr"))^-1 / binaryOp;
+  AddExpr     = chainOp(V"MulExpr", V"AddOp", "AddExpr");
+  MulExpr     = chainOp(V"UnaryExpr", V"MulOp", "MulExpr");
+  UnaryExpr   = V"UnaryOp" * expect(V"UnaryExpr", "UnaryExpr") / unaryOp
+              + V"PowExpr";
+  PowExpr     = V"SimpleExpr" * (V"PowOp" * expect(V"UnaryExpr", "PowExpr"))^-1 / binaryOp;
+
+  SimpleExpr = tagC("Number", V"Number")
+             + tagC("String", V"String")
+             + tagC("Nil", kw("nil"))
+             + tagC("False", kw("false"))
+             + tagC("True", kw("true"))
+             + tagC("Dots", sym("..."))
+             + V"FuncDef"
+             + V"Table"
+             + V"SuffixedExpr";
+
+  FuncCall  = Cmt(V"SuffixedExpr", function(s, i, exp) return exp.tag == "Call" or exp.tag == "Invoke", exp end);
+  VarExpr   = Cmt(V"SuffixedExpr", function(s, i, exp) return exp.tag == "Id" or exp.tag == "Index", exp end);
+
+  SuffixedExpr  = Cf(V"PrimaryExpr" * (V"Index" + V"Call")^0, makeIndexOrCall);
+  PrimaryExpr   = V"Id" + tagC("Paren", sym("(") * expect(V"Expr", "ExprParen") * expect(sym(")"), "CParenExpr"));
+  Index         = tagC("DotIndex", sym("." * -P".") * expect(V"StrId", "NameIndex"))
+                + tagC("ArrayIndex", sym("[" * -P(S"=[")) * expect(V"Expr", "ExprIndex") * expect(sym("]"), "CBracketIndex"));
+  Call          = tagC("Invoke", Cg(sym(":" * -P":") * expect(V"StrId", "NameMeth") * expect(V"FuncArgs", "MethArgs")))
+                + tagC("Call", V"FuncArgs");
+
+  FuncDef   = kw("function") * V"FuncBody";
+  FuncArgs  = sym("(") * commaSep(V"Expr", "ArgList")^-1 * expect(sym(")"), "CParenArgs")
+            + V"Table"
+            + tagC("String", V"String");
+
+  Table      = tagC("Table", sym("{") * V"FieldList"^-1 * expect(sym("}"), "CBraceTable"));
+  FieldList  = sepBy(V"Field", V"FieldSep") * V"FieldSep"^-1;
+  Field      = tagC("Pair", V"FieldKey" * expect(sym("="), "EqField") * expect(V"Expr", "ExprField"))
+             + V"Expr";
+  FieldKey   = sym("[" * -P(S"=[")) * expect(V"Expr", "ExprFKey") * expect(sym("]"), "CBracketFKey")
+             + V"StrId" * #("=" * -P"=");
+  FieldSep   = sym(",") + sym(";");
+
+  Id     = tagC("Id", V"Name");
+  StrId  = tagC("String", V"Name");
+
   -- lexer
-  Space = space^1;
-  Equals = P"="^0;
-  Open = "[" * Cg(V"Equals", "init") * "[" * P"\n"^-1;
-  Close = "]" * C(V"Equals") * "]";
-  CloseEQ = Cmt(V"Close" * Cb("init"),
-            function (s, i, a, b) return a == b end);
-  LongString = V"Open" * C((P(1) - V"CloseEQ")^0) * V"Close" /
-               function (s, o) return s end;
-  Comment = P"--" * V"LongString" / function () return end +
-            P"--" * (P(1) - P"\n")^0;
-  Skip = (V"Space" + V"Comment")^0;
-  idStart = alpha + P("_");
-  idRest = alnum + P("_");
-  Keywords = P("and") + "break" + "do" + "elseif" + "else" + "end" +
-             "false" + "for" + "function" + "goto" + "if" + "in" +
-             "local" + "nil" + "not" + "or" + "repeat" + "return" +
-             "then" + "true" + "until" + "while";
-  Reserved = V"Keywords" * -V"idRest";
-  Identifier = V"idStart" * V"idRest"^0;
-  Name = -V"Reserved" * C(V"Identifier") * -V"idRest";
-  Hex = (P("0x") + P("0X")) * xdigit^1;
-  Expo = S("eE") * S("+-")^-1 * digit^1;
-  Float = (((digit^1 * P(".") * digit^0) +
-          (P(".") * digit^1)) * V"Expo"^-1) +
-          (digit^1 * V"Expo");
-  Int = digit^1;
-  Number = C(V"Hex" + V"Float" + V"Int") /
-           function (n) return tonumber(n) end;
-  ShortString = P'"' * C(((P'\\' * P(1)) + (P(1) - P'"'))^0) * P'"' +
-                P"'" * C(((P"\\" * P(1)) + (P(1) - P"'"))^0) * P"'";
-  String = V"LongString" + (V"ShortString" / function (s) return fix_str(s) end);
-  OrOp = kw("or") / "or";
-  AndOp = kw("and") / "and";
-  RelOp = symb("~=") / "ne" +
-          symb("==") / "eq" +
-          symb("<=") / "le" +
-          symb(">=") / "ge" +
-          symb("<") / "lt" +
-          symb(">") / "gt";
-  BOrOp = symb("|") / "bor";
-  BXorOp = symb("~") / "bxor";
-  BAndOp = symb("&") / "band";
-  ShiftOp = symb("<<") / "shl" +
-            symb(">>") / "shr";
-  ConOp = symb("..") / "concat";
-  AddOp = symb("+") / "add" +
-          symb("-") / "sub";
-  MulOp = symb("*") / "mul" +
-          symb("//") / "idiv" +
-          symb("/") / "div" +
-          symb("%") / "mod";
-  UnOp = kw("not") / "not" +
-         symb("-") / "unm" +
-         symb("#") / "len" +
-         symb("~") / "bnot";
-  PowOp = symb("^") / "pow";
-  Shebang = P"#" * (P(1) - P"\n")^0 * P"\n";
-  -- for error reporting
-  OneWord = V"Name" + V"Number" + V"String" + V"Reserved" + P("...") + P(1);
+  Skip     = (V"Space" + V"Comment")^0;
+  Space    = space^1;
+  Comment  = P"--" * V"LongStr" / function () return end
+           + P"--" * (P(1) - P"\n")^0;
+
+  Name      = token(-V"Reserved" * C(V"Ident"));
+  Reserved  = V"Keywords" * -V"IdRest";
+  Keywords  = P"and" + "break" + "do" + "elseif" + "else" + "end"
+            + "false" + "for" + "function" + "goto" + "if" + "in"
+            + "local" + "nil" + "not" + "or" + "repeat" + "return"
+            + "then" + "true" + "until" + "while";
+  Ident     = V"IdStart" * V"IdRest"^0;
+  IdStart   = alpha + P"_";
+  IdRest    = alnum + P"_";
+
+  Number   = token((V"Hex" + V"Float" + V"Int") / tonumber);
+  Hex      = (P"0x" + "0X") * expect(xdigit^1, "DigitHex");
+  Float    = V"Decimal" * V"Expo"^-1
+           + V"Int" * V"Expo";
+  Decimal  = digit^1 * "." * digit^0
+           + P"." * -P"." * expect(digit^1, "DigitDeci");
+  Expo     = S"eE" * S"+-"^-1 * expect(digit^1, "DigitExpo");
+  Int      = digit^1;
+
+  String    = token(V"ShortStr" + V"LongStr");
+  ShortStr  = P'"' * Cs((V"EscSeq" + (P(1)-S'"\n'))^0) * expect(P'"', "Quote")
+            + P"'" * Cs((V"EscSeq" + (P(1)-S"'\n"))^0) * expect(P"'", "Quote");
+
+  EscSeq = P"\\" / ""  -- remove backslash
+         * ( P"a" / "\a"
+           + P"b" / "\b"
+           + P"f" / "\f"
+           + P"n" / "\n"
+           + P"r" / "\r"
+           + P"t" / "\t"
+           + P"v" / "\v"
+ 
+           + P"\n" / "\n"
+           + P"\r" / "\n"
+ 
+           + P"\\" / "\\"
+           + P"\"" / "\""
+           + P"\'" / "\'"
+
+           + P"z" * space^0  / ""
+
+           + digit * digit^-2 / tonumber / string.char
+           + P"x" * expect(C(xdigit * xdigit), "HexEsc") * Cc(16) / tonumber / string.char
+           + P"u" * expect("{", "OBraceUEsc")
+                  * expect(C(xdigit^1), "DigitUEsc") * Cc(16)
+                  * expect("}", "CBraceUEsc")
+                  / tonumber 
+                  / (utf8 and utf8.char or string.char)  -- true max is \u{10FFFF}
+                                                         -- utf8.char needs Lua 5.3
+                                                         -- string.char works only until \u{FF}
+
+           + throw("EscSeq")
+           );
+
+  LongStr  = V"Open" * C((P(1) - V"CloseEq")^0) * expect(V"Close", "CloseLStr") / function (s, eqs) return s end;
+  Open     = "[" * Cg(V"Equals", "openEq") * "[" * P"\n"^-1;
+  Close    = "]" * C(V"Equals") * "]";
+  Equals   = P"="^0;
+  CloseEq  = Cmt(V"Close" * Cb("openEq"), function (s, i, closeEq, openEq) return #openEq == #closeEq end);
+
+  OrOp      = kw("or")   / "or";
+  AndOp     = kw("and")  / "and";
+  RelOp     = sym("~=")  / "ne"
+            + sym("==")  / "eq"
+            + sym("<=")  / "le"
+            + sym(">=")  / "ge"
+            + sym("<")   / "lt"
+            + sym(">")   / "gt";
+  BOrOp     = sym("|")   / "bor";
+  BXorOp    = sym("~" * -P"=") / "bxor";
+  BAndOp    = sym("&")   / "band";
+  ShiftOp   = sym("<<")  / "shl"
+            + sym(">>")  / "shr";
+  ConcatOp  = sym("..")  / "concat";
+  AddOp     = sym("+")   / "add"
+            + sym("-")   / "sub";
+  MulOp     = sym("*")   / "mul"
+            + sym("//")  / "idiv"
+            + sym("/")   / "div"
+            + sym("%")   / "mod";
+  UnaryOp   = kw("not")  / "not"
+            + sym("-")   / "unm"
+            + sym("#")   / "len"
+            + sym("~")   / "bnot";
+  PowOp     = sym("^")   / "pow";
 }
 
-local function exist_label (env, scope, stm)
-  local l = stm[1]
-  for s=scope, 0, -1 do
-    if env[s]["label"][l] then return true end
-  end
-  return false
-end
+local parser = {}
 
-local function set_label (env, label, pos)
-  local scope = env.scope
-  local l = env[scope]["label"][label]
-  if not l then
-    env[scope]["label"][label] = { name = label, pos = pos }
-    return true
-  else
-    local msg = "label '%s' already defined at line %d"
-    local line = lineno(env.errorinfo.subject, l.pos)
-    msg = string.format(msg, label, line)
-    return nil, syntaxerror(env.errorinfo, pos, msg)
-  end
-end
-
-local function set_pending_goto (env, stm)
-  local scope = env.scope
-  table.insert(env[scope]["goto"], stm)
-  return true
-end
-
-local function verify_pending_gotos (env)
-  for s=env.maxscope, 0, -1 do
-    for k, v in ipairs(env[s]["goto"]) do
-      if not exist_label(env, s, v) then
-        local msg = "no visible label '%s' for <goto>"
-        msg = string.format(msg, v[1])
-        return nil, syntaxerror(env.errorinfo, v.pos, msg)
-      end
-    end
-  end
-  return true
-end
-
-local function set_vararg (env, is_vararg)
-  env["function"][env.fscope].is_vararg = is_vararg
-end
-
-local traverse_stm, traverse_exp, traverse_var
-local traverse_block, traverse_explist, traverse_varlist, traverse_parlist
-
-function traverse_parlist (env, parlist)
-  local len = #parlist
-  local is_vararg = false
-  if len > 0 and parlist[len].tag == "Dots" then
-    is_vararg = true
-  end
-  set_vararg(env, is_vararg)
-  return true
-end
-
-local function traverse_function (env, exp)
-  new_function(env)
-  new_scope(env)
-  local status, msg = traverse_parlist(env, exp[1])
-  if not status then return status, msg end
-  status, msg = traverse_block(env, exp[2])
-  if not status then return status, msg end
-  end_scope(env)
-  end_function(env)
-  return true
-end
-
-local function traverse_op (env, exp)
-  local status, msg = traverse_exp(env, exp[2])
-  if not status then return status, msg end
-  if exp[3] then
-    status, msg = traverse_exp(env, exp[3])
-    if not status then return status, msg end
-  end
-  return true
-end
-
-local function traverse_paren (env, exp)
-  local status, msg = traverse_exp(env, exp[1])
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_table (env, fieldlist)
-  for k, v in ipairs(fieldlist) do
-    local tag = v.tag
-    if tag == "Pair" then
-      local status, msg = traverse_exp(env, v[1])
-      if not status then return status, msg end
-      status, msg = traverse_exp(env, v[2])
-      if not status then return status, msg end
-    else
-      local status, msg = traverse_exp(env, v)
-      if not status then return status, msg end
-    end
-  end
-  return true
-end
-
-local function traverse_vararg (env, exp)
-  if not env["function"][env.fscope].is_vararg then
-    local msg = "cannot use '...' outside a vararg function"
-    return nil, syntaxerror(env.errorinfo, exp.pos, msg)
-  end
-  return true
-end
-
-local function traverse_call (env, call)
-  local status, msg = traverse_exp(env, call[1])
-  if not status then return status, msg end
-  for i=2, #call do
-    status, msg = traverse_exp(env, call[i])
-    if not status then return status, msg end
-  end
-  return true
-end
-
-local function traverse_invoke (env, invoke)
-  local status, msg = traverse_exp(env, invoke[1])
-  if not status then return status, msg end
-  for i=3, #invoke do
-    status, msg = traverse_exp(env, invoke[i])
-    if not status then return status, msg end
-  end
-  return true
-end
-
-local function traverse_assignment (env, stm)
-  local status, msg = traverse_varlist(env, stm[1])
-  if not status then return status, msg end
-  status, msg = traverse_explist(env, stm[2])
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_break (env, stm)
-  if not insideloop(env) then
-    local msg = "<break> not inside a loop"
-    return nil, syntaxerror(env.errorinfo, stm.pos, msg)
-  end
-  return true
-end
-
-local function traverse_forin (env, stm)
-  begin_loop(env)
-  new_scope(env)
-  local status, msg = traverse_explist(env, stm[2])
-  if not status then return status, msg end
-  status, msg = traverse_block(env, stm[3])
-  if not status then return status, msg end
-  end_scope(env)
-  end_loop(env)
-  return true
-end
-
-local function traverse_fornum (env, stm)
-  local status, msg
-  begin_loop(env)
-  new_scope(env)
-  status, msg = traverse_exp(env, stm[2])
-  if not status then return status, msg end
-  status, msg = traverse_exp(env, stm[3])
-  if not status then return status, msg end
-  if stm[5] then
-    status, msg = traverse_exp(env, stm[4])
-    if not status then return status, msg end
-    status, msg = traverse_block(env, stm[5])
-    if not status then return status, msg end
-  else
-    status, msg = traverse_block(env, stm[4])
-    if not status then return status, msg end
-  end
-  end_scope(env)
-  end_loop(env)
-  return true
-end
-
-local function traverse_goto (env, stm)
-  local status, msg = set_pending_goto(env, stm)
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_if (env, stm)
-  local len = #stm
-  if len % 2 == 0 then
-    for i=1, len, 2 do
-      local status, msg = traverse_exp(env, stm[i])
-      if not status then return status, msg end
-      status, msg = traverse_block(env, stm[i+1])
-      if not status then return status, msg end
-    end
-  else
-    for i=1, len-1, 2 do
-      local status, msg = traverse_exp(env, stm[i])
-      if not status then return status, msg end
-      status, msg = traverse_block(env, stm[i+1])
-      if not status then return status, msg end
-    end
-    local status, msg = traverse_block(env, stm[len])
-    if not status then return status, msg end
-  end
-  return true
-end
-
-local function traverse_label (env, stm)
-  local status, msg = set_label(env, stm[1], stm.pos)
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_let (env, stm)
-  local status, msg = traverse_explist(env, stm[2])
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_letrec (env, stm)
-  local status, msg = traverse_exp(env, stm[2][1])
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_repeat (env, stm)
-  begin_loop(env)
-  local status, msg = traverse_block(env, stm[1])
-  if not status then return status, msg end
-  status, msg = traverse_exp(env, stm[2])
-  if not status then return status, msg end
-  end_loop(env)
-  return true
-end
-
-local function traverse_return (env, stm)
-  local status, msg = traverse_explist(env, stm)
-  if not status then return status, msg end
-  return true
-end
-
-local function traverse_while (env, stm)
-  begin_loop(env)
-  local status, msg = traverse_exp(env, stm[1])
-  if not status then return status, msg end
-  status, msg = traverse_block(env, stm[2])
-  if not status then return status, msg end
-  end_loop(env)
-  return true
-end
-
-function traverse_var (env, var)
-  local tag = var.tag
-  if tag == "Id" then -- `Id{ <string> }
-    return true
-  elseif tag == "Index" then -- `Index{ expr expr }
-    local status, msg = traverse_exp(env, var[1])
-    if not status then return status, msg end
-    status, msg = traverse_exp(env, var[2])
-    if not status then return status, msg end
-    return true
-  else
-    error("expecting a variable, but got a " .. tag)
-  end
-end
-
-function traverse_varlist (env, varlist)
-  for k, v in ipairs(varlist) do
-    local status, msg = traverse_var(env, v)
-    if not status then return status, msg end
-  end
-  return true
-end
-
-function traverse_exp (env, exp)
-  local tag = exp.tag
-  if tag == "Nil" or
-     tag == "True" or
-     tag == "False" or
-     tag == "Number" or -- `Number{ <number> }
-     tag == "String" then -- `String{ <string> }
-    return true
-  elseif tag == "Dots" then
-    return traverse_vararg(env, exp)
-  elseif tag == "Function" then -- `Function{ { `Id{ <string> }* `Dots? } block }
-    return traverse_function(env, exp)
-  elseif tag == "Table" then -- `Table{ ( `Pair{ expr expr } | expr )* }
-    return traverse_table(env, exp)
-  elseif tag == "Op" then -- `Op{ opid expr expr? }
-    return traverse_op(env, exp)
-  elseif tag == "Paren" then -- `Paren{ expr }
-    return traverse_paren(env, exp)
-  elseif tag == "Call" then -- `Call{ expr expr* }
-    return traverse_call(env, exp)
-  elseif tag == "Invoke" then -- `Invoke{ expr `String{ <string> expr* }
-    return traverse_invoke(env, exp)
-  elseif tag == "Id" or -- `Id{ <string> }
-         tag == "Index" then -- `Index{ expr expr }
-    return traverse_var(env, exp)
-  else
-    error("expecting an expression, but got a " .. tag)
-  end
-end
-
-function traverse_explist (env, explist)
-  for k, v in ipairs(explist) do
-    local status, msg = traverse_exp(env, v)
-    if not status then return status, msg end
-  end
-  return true
-end
-
-function traverse_stm (env, stm)
-  local tag = stm.tag
-  if tag == "Do" then -- `Do{ stat* }
-    return traverse_block(env, stm)
-  elseif tag == "Set" then -- `Set{ {lhs+} {expr+} }
-    return traverse_assignment(env, stm)
-  elseif tag == "While" then -- `While{ expr block }
-    return traverse_while(env, stm)
-  elseif tag == "Repeat" then -- `Repeat{ block expr }
-    return traverse_repeat(env, stm)
-  elseif tag == "If" then -- `If{ (expr block)+ block? }
-    return traverse_if(env, stm)
-  elseif tag == "Fornum" then -- `Fornum{ ident expr expr expr? block }
-    return traverse_fornum(env, stm)
-  elseif tag == "Forin" then -- `Forin{ {ident+} {expr+} block }
-    return traverse_forin(env, stm)
-  elseif tag == "Local" then -- `Local{ {ident+} {expr+}? }
-    return traverse_let(env, stm)
-  elseif tag == "Localrec" then -- `Localrec{ ident expr }
-    return traverse_letrec(env, stm)
-  elseif tag == "Goto" then -- `Goto{ <string> }
-    return traverse_goto(env, stm)
-  elseif tag == "Label" then -- `Label{ <string> }
-    return traverse_label(env, stm)
-  elseif tag == "Return" then -- `Return{ <expr>* }
-    return traverse_return(env, stm)
-  elseif tag == "Break" then
-    return traverse_break(env, stm)
-  elseif tag == "Call" then -- `Call{ expr expr* }
-    return traverse_call(env, stm)
-  elseif tag == "Invoke" then -- `Invoke{ expr `String{ <string> } expr* }
-    return traverse_invoke(env, stm)
-  else
-    error("expecting a statement, but got a " .. tag)
-  end
-end
-
-function traverse_block (env, block)
-  local l = {}
-  new_scope(env)
-  for k, v in ipairs(block) do
-    local status, msg = traverse_stm(env, v)
-    if not status then return status, msg end
-  end
-  end_scope(env)
-  return true
-end
-
-
-local function traverse (ast, errorinfo)
-  assert(type(ast) == "table")
-  assert(type(errorinfo) == "table")
-  local env = { errorinfo = errorinfo, ["function"] = {} }
-  new_function(env)
-  set_vararg(env, true)
-  local status, msg = traverse_block(env, ast)
-  if not status then return status, msg end
-  end_function(env)
-  status, msg = verify_pending_gotos(env)
-  if not status then return status, msg end
-  return ast
-end
+local validator = require("lua-parser.validator")
+local validate = validator.validate
+local syntaxerror = validator.syntaxerror
 
 function parser.parse (subject, filename)
   local errorinfo = { subject = subject, filename = filename }
   lpeg.setmaxstack(1000)
-  local ast, error_msg = lpeg.match(G, subject, nil, errorinfo)
-  if not ast then return ast, error_msg end
-  return traverse(ast, errorinfo)
+  local ast, label, sfail = lpeg.match(G, subject, nil, errorinfo)
+  if not ast then
+    local errpos = #subject-#sfail+1
+    local errmsg = labels[label][2]
+    return ast, syntaxerror(errorinfo, errpos, errmsg)
+  end
+  return validate(ast, errorinfo)
 end
 
 return parser
