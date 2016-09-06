@@ -2,15 +2,15 @@ lua-parser
 ==========
 [![Build Status](https://travis-ci.org/andremm/lua-parser.svg?branch=master)](https://travis-ci.org/andremm/lua-parser)
 
-This is a Lua 5.3 parser written with LPegLabel that generates an AST in
-the format specified by [Metalua](https://github.com/fab13n/metalua-parser).
+This is a Lua 5.3 parser written with [LPegLabel](https://github.com/sqmedeiros/lpeglabel) that
+generates an AST in the format specified by [Metalua](https://github.com/fab13n/metalua-parser).
 The parser uses LPegLabel to provide more specific error messages.
 
 Requirements
 ------------
 
         lua >= 5.1
-        [lpeglabel](https://github.com/sqmedeiros/lpeglabel) >= 1.0.0
+        lpeglabel >= 1.0.0
 
 API
 ---

@@ -33,6 +33,10 @@ local function parse (s)
   return r .. "\n"
 end
 
+local function fixint (s)
+  return _VERSION < "Lua 5.3" and s:gsub("%.0","") or s
+end
+
 print("> testing lexer...")
 
 -- syntax ok
@@ -77,55 +81,55 @@ f1 = 1.
 f2 = 1.1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "1" } }, `Set{ { `Id "f2" }, { `Number "1.1" } } }
+{ `Set{ { `Id "f1" }, { `Number "1.0" } }, `Set{ { `Id "f2" }, { `Number "1.1" } } }
 ]=]
 
 r = parse(s)
-assert(r == e)
+assert(r == fixint(e))
 
 s = [=[
 f1 = 1.e-1
 f2 = 1.e1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "10" } } }
+{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "10.0" } } }
 ]=]
 
 r = parse(s)
-assert(r == e)
+assert(r == fixint(e))
 
 s = [=[
 f1 = 1.1e+1
 f2 = 1.1e1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "11" } }, `Set{ { `Id "f2" }, { `Number "11" } } }
+{ `Set{ { `Id "f1" }, { `Number "11.0" } }, `Set{ { `Id "f2" }, { `Number "11.0" } } }
 ]=]
 
 r = parse(s)
-assert(r == e)
+assert(r == fixint(e))
 
 s = [=[
 f1 = .1
 f2 = .1e1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "1" } } }
+{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "1.0" } } }
 ]=]
 
 r = parse(s)
-assert(r == e)
+assert(r == fixint(e))
 
 s = [=[
 f1 = 1E1
 f2 = 1e-1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "10" } }, `Set{ { `Id "f2" }, { `Number "0.1" } } }
+{ `Set{ { `Id "f1" }, { `Number "10.0" } }, `Set{ { `Id "f2" }, { `Number "0.1" } } }
 ]=]
 
 r = parse(s)
-assert(r == e)
+assert(r == fixint(e))
 
 -- integers
 
