@@ -1,16 +1,16 @@
 lua-parser
 ==========
+[![Build Status](https://travis-ci.org/andremm/lua-parser.svg?branch=master)](https://travis-ci.org/andremm/lua-parser)
 
-This is a Lua 5.3 parser written with LPeg that generates an AST in
+This is a Lua 5.3 parser written with LPegLabel that generates an AST in
 the format specified by [Metalua](https://github.com/fab13n/metalua-parser).
-The parser also implements an error reporting technique that is
-based on tracking the farthest failure position.
+The parser uses LPegLabel to provide more specific error messages.
 
 Requirements
 ------------
 
         lua >= 5.1
-        lpeg >= 0.12
+        [lpeglabel](https://github.com/sqmedeiros/lpeglabel) >= 1.0.0
 
 API
 ---
@@ -58,7 +58,7 @@ Usage
         os.exit(1)
     end
 
-    local ast, error_msg = parser.parse(arg[1], "exemplo1.lua")
+    local ast, error_msg = parser.parse(arg[1], "example.lua")
     if not ast then
         print(error_msg)
         os.exit(1)
@@ -75,7 +75,5 @@ Usage
 **Running the above code example using a string with syntax error:**
 
     $ lua parse.lua "for i=1, 10 do print(i) "
-    exemplo1.lua:1:24: syntax error, unexpected 'EOF', expecting 'end',
-    'return', 'Name', 'goto', 'break', '::', 'local', 'function', 'repeat',
-    'for', 'do', 'while', 'if', ';', '=', ',', 'String', '{', '(', ':', '[', '.'
+    example.lua:1:24: syntax error, expected 'end' to close the for loop
 
