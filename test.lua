@@ -460,10 +460,11 @@ string'
 -- short string test end
 ]=]
 e = [=[
+test.lua:4:1: syntax error, unclosed string
 ]=]
 
 r = parse(s)
---assert(r == e)
+assert(r == e)
 
 -- unfinished comments
 
