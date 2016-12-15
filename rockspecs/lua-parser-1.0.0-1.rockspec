@@ -25,7 +25,7 @@ build = {
     ["lua-parser.parser"] = "lua-parser/parser.lua",
     ["lua-parser.pp"] = "lua-parser/pp.lua",
     ["lua-parser.scope"] = "lua-parser/scope.lua",
-    ["lua-parser.validator"] = "lua-parser/scope.lua",
+    ["lua-parser.validator"] = "lua-parser/validator.lua",
   }
 }
 
