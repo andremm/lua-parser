@@ -43,6 +43,10 @@ local function name2str (name)
   return string.format('"%s"', name)
 end
 
+local function boolean2str (b)
+  return string.format('"%s"', tostring(b))
+end
+
 local function number2str (n)
   return string.format('"%s"', tostring(n))
 end
@@ -117,9 +121,9 @@ function exp2str (exp)
   local tag = exp.tag
   local str = "`" .. tag
   if tag == "Nil" or
-     tag == "Dots" or
-     tag == "True" or
-     tag == "False" then
+     tag == "Dots" then
+  elseif tag == "Boolean" then -- `Boolean{ <boolean> }
+    str = str .. " " .. boolean2str(exp[1])
   elseif tag == "Number" then -- `Number{ <number> }
     str = str .. " " .. number2str(exp[1])
   elseif tag == "String" then -- `String{ <string> }

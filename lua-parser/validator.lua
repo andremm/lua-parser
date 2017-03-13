@@ -294,8 +294,7 @@ end
 function traverse_exp (env, exp)
   local tag = exp.tag
   if tag == "Nil" or
-     tag == "True" or
-     tag == "False" or
+     tag == "Boolean" or -- `Boolean{ <boolean> }
      tag == "Number" or -- `Number{ <number> }
      tag == "String" then -- `String{ <string> }
     return true

@@ -25,8 +25,7 @@ stat:
 expr:
     `Nil
   | `Dots
-  | `True
-  | `False
+  | `Boolean{ <boolean> }
   | `Number{ <number> }
   | `String{ <string> }
   | `Function{ { `Id{ <string> }* `Dots? } block }
@@ -338,8 +337,8 @@ local G = { V"Lua",
   SimpleExpr = tagC("Number", V"Number")
              + tagC("String", V"String")
              + tagC("Nil", kw("nil"))
-             + tagC("False", kw("false"))
-             + tagC("True", kw("true"))
+             + tagC("Boolean", kw("false") * Cc(false))
+             + tagC("Boolean", kw("true") * Cc(true))
              + tagC("Dots", sym("..."))
              + V"FuncDef"
              + V"Table"

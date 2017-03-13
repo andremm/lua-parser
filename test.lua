@@ -68,7 +68,7 @@ s = [=[
 _nil,_false,_true,_dots = nil,false,true,...
 ]=]
 e = [=[
-{ `Set{ { `Id "_nil", `Id "_false", `Id "_true", `Id "_dots" }, { `Nil, `False, `True, `Dots } } }
+{ `Set{ { `Id "_nil", `Id "_false", `Id "_true", `Id "_dots" }, { `Nil, `Boolean "false", `Boolean "true", `Dots } } }
 ]=]
 
 r = parse(s)
