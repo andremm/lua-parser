@@ -3,7 +3,7 @@ lua-parser
 [![Build Status](https://travis-ci.org/andremm/lua-parser.svg?branch=master)](https://travis-ci.org/andremm/lua-parser)
 
 This is a Lua 5.3 parser written with [LPegLabel](https://github.com/sqmedeiros/lpeglabel) that
-generates an AST in the format specified by [Metalua](https://github.com/fab13n/metalua-parser).
+generates an AST in a format that is similar to the one specified by [Metalua](https://github.com/fab13n/metalua-parser).
 The parser uses LPegLabel to provide more specific error messages.
 
 Requirements
@@ -43,6 +43,54 @@ a dump function:
 
     It dumps the AST to the screen.
     The parameter **i** sets the indentation level.
+
+AST format
+----------
+
+	block: { stat* }
+
+	stat:
+            `Do{ stat* }
+          | `Set{ {lhs+} {expr+} }                    -- lhs1, lhs2... = e1, e2...
+          | `While{ expr block }                      -- while e do b end
+          | `Repeat{ block expr }                     -- repeat b until e
+          | `If{ (expr block)+ block? }               -- if e1 then b1 [elseif e2 then b2] ... [else bn] end
+          | `Fornum{ ident expr expr expr? block }    -- for ident = e, e[, e] do b end
+          | `Forin{ {ident+} {expr+} block }          -- for i1, i2... in e1, e2... do b end
+          | `Local{ {ident+} {expr+}? }               -- local i1, i2... = e1, e2...
+          | `Localrec{ ident expr }                   -- only used for 'local function'
+          | `Goto{ <string> }                         -- goto str
+          | `Label{ <string> }                        -- ::str::
+          | `Return{ <expr*> }                        -- return e1, e2...
+          | `Break                                    -- break
+          | apply
+
+	expr:
+            `Nil
+          | `Dots
+          | `Boolean{ <boolean> }
+          | `Number{ <number> }
+          | `String{ <string> }
+          | `Function{ { `Id{ <string> }* `Dots? } block }
+          | `Table{ ( `Pair{ expr expr } | expr )* }
+          | `Op{ opid expr expr? }
+          | `Paren{ expr }       -- significant to cut multiple values returns
+          | apply
+          | lhs
+
+	apply:
+             `Call{ expr expr* }
+           | `Invoke{ expr `String{ <string> } expr* }
+
+	lhs: `Id{ <string> } | `Index{ expr expr }
+
+	opid:  -- includes additional operators from Lua 5.3
+            'add'  | 'sub' | 'mul'  | 'div'
+          | 'idiv' | 'mod' | 'pow'  | 'concat'
+          | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
+          | 'eq'   | 'lt'  | 'le'   | 'and' | 'or'
+          | 'unm'  | 'len' | 'bnot' | 'not'
+
 
 Usage
 --------
