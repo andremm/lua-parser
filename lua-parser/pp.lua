@@ -311,8 +311,8 @@ end
 function pp.dump (t, i)
   if i == nil then i = 0 end
   io.write(string.format("{\n"))
-  io.write(string.format("%s[tag] = %s\n", string.rep(" ", i+2), t.tag))
-  io.write(string.format("%s[pos] = %s\n", string.rep(" ", i+2), t.pos))
+  io.write(string.format("%s[tag] = %s\n", string.rep(" ", i+2), t.tag or "nil"))
+  io.write(string.format("%s[pos] = %s\n", string.rep(" ", i+2), t.pos or "nil"))
   for k,v in ipairs(t) do
     io.write(string.format("%s[%s] = ", string.rep(" ", i+2), tostring(k)))
     if type(v) == "table" then
