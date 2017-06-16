@@ -386,7 +386,7 @@ local G = { V"Lua",
   IdStart   = alpha + P"_";
   IdRest    = alnum + P"_";
 
-  Number   = token((V"Hex" + V"Float" + V"Int") / tonumber);
+  Number   = token((V"Hex" + V"Float" + V"Int"));
   Hex      = (P"0x" + "0X") * expect(xdigit^1, "DigitHex");
   Float    = V"Decimal" * V"Expo"^-1
            + V"Int" * V"Expo";
