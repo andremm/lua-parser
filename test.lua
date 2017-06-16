@@ -81,55 +81,55 @@ f1 = 1.
 f2 = 1.1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "1.0" } }, `Set{ { `Id "f2" }, { `Number "1.1" } } }
+{ `Set{ { `Id "f1" }, { `Number "1." } }, `Set{ { `Id "f2" }, { `Number "1.1" } } }
 ]=]
 
 r = parse(s)
-assert(r == fixint(e))
+assert(r == (e))
 
 s = [=[
 f1 = 1.e-1
 f2 = 1.e1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "10.0" } } }
+{ `Set{ { `Id "f1" }, { `Number "1.e-1" } }, `Set{ { `Id "f2" }, { `Number "1.e1" } } }
 ]=]
 
 r = parse(s)
-assert(r == fixint(e))
+assert(r == (e))
 
 s = [=[
 f1 = 1.1e+1
 f2 = 1.1e1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "11.0" } }, `Set{ { `Id "f2" }, { `Number "11.0" } } }
+{ `Set{ { `Id "f1" }, { `Number "1.1e+1" } }, `Set{ { `Id "f2" }, { `Number "1.1e1" } } }
 ]=]
 
 r = parse(s)
-assert(r == fixint(e))
+assert(r == (e))
 
 s = [=[
 f1 = .1
 f2 = .1e1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "0.1" } }, `Set{ { `Id "f2" }, { `Number "1.0" } } }
+{ `Set{ { `Id "f1" }, { `Number ".1" } }, `Set{ { `Id "f2" }, { `Number ".1e1" } } }
 ]=]
 
 r = parse(s)
-assert(r == fixint(e))
+assert(r == (e))
 
 s = [=[
 f1 = 1E1
 f2 = 1e-1
 ]=]
 e = [=[
-{ `Set{ { `Id "f1" }, { `Number "10.0" } }, `Set{ { `Id "f2" }, { `Number "0.1" } } }
+{ `Set{ { `Id "f1" }, { `Number "1E1" } }, `Set{ { `Id "f2" }, { `Number "1e-1" } } }
 ]=]
 
 r = parse(s)
-assert(r == fixint(e))
+assert(r == (e))
 
 -- integers
 
@@ -138,7 +138,7 @@ i = 1
 h = 0xff
 ]=]
 e = [=[
-{ `Set{ { `Id "i" }, { `Number "1" } }, `Set{ { `Id "h" }, { `Number "255" } } }
+{ `Set{ { `Id "i" }, { `Number "1" } }, `Set{ { `Id "h" }, { `Number "0xff" } } }
 ]=]
 
 r = parse(s)
@@ -149,7 +149,7 @@ h = 0x76c
 i = 4294967296 -- 2^32
 ]=]
 e = [=[
-{ `Set{ { `Id "h" }, { `Number "1900" } }, `Set{ { `Id "i" }, { `Number "4294967296" } } }
+{ `Set{ { `Id "h" }, { `Number "0x76c" } }, `Set{ { `Id "i" }, { `Number "4294967296" } } }
 ]=]
 
 r = parse(s)

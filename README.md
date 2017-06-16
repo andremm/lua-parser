@@ -1,6 +1,6 @@
 lua-parser
 ==========
-[![Build Status](https://travis-ci.org/andremm/lua-parser.svg?branch=master)](https://travis-ci.org/andremm/lua-parser)
+[![Build Status](https://travis-ci.org/hnes/lua-parser.svg?branch=master)](https://travis-ci.org/hnes/lua-parser)
 
 This is a Lua 5.3 parser written with [LPegLabel](https://github.com/sqmedeiros/lpeglabel) that
 generates an AST in a format that is similar to the one specified by [Metalua](https://github.com/fab13n/metalua-parser).
