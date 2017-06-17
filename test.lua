@@ -670,7 +670,7 @@ repeat
 until 1
 ]=]
 e = [=[
-{ `Repeat{ { `If{ `Op{ "lt", `Number "1", `Number "2" }, { `Break } } }, `Number "1" } }
+{ `Repeat{ { `If{ `Op{ "gt", `Number "2", `Number "1" }, { `Break } } }, `Number "1" } }
 ]=]
 
 r = parse(s)
@@ -1107,7 +1107,7 @@ s = [=[
 relational = 1 < 2 >= 3 == 4 ~= 5 < 6 <= 7
 ]=]
 e = [=[
-{ `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "not", `Op{ "eq", `Op{ "eq", `Op{ "le", `Number "3", `Op{ "lt", `Number "1", `Number "2" } }, `Number "4" }, `Number "5" } }, `Number "6" }, `Number "7" } } } }
+{ `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "not", `Op{ "eq", `Op{ "eq", `Op{ "ge", `Op{ "lt", `Number "1", `Number "2" }, `Number "3" }, `Number "4" }, `Number "5" } }, `Number "6" }, `Number "7" } } } }
 ]=]
 
 r = parse(s)
