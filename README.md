@@ -86,11 +86,11 @@ AST format
 
 	opid:  -- includes additional operators from Lua 5.3
             'add'  | 'sub' | 'mul'  | 'div'
-          | 'idiv' | 'mod' | 'pow'  | 'concat'
-          | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
-          | 'eq'   | 'lt'  | 'le'   | 'and' | 'or'
-          | 'unm'  | 'len' | 'bnot' | 'not'
-
+  	  | 'idiv' | 'mod' | 'pow'  | 'concat'
+ 	  | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
+	  | 'eq'   | 'lt'  | 'gt'   | 'le'  | 'ge'
+	  | 'and' | 'or'   | 'unm'  | 'len' | 'bnot' 
+	  | 'not'
 
 Usage
 --------
