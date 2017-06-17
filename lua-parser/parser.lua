@@ -204,10 +204,6 @@ local function binaryOp (e1, op, e2)
   if op == "ne" then
     node[1] = "eq"
     node = unaryOp("not", node)
-  elseif op == "gt" then
-    node[1], node[2], node[3] = "lt", e2, e1
-  elseif op == "ge" then
-    node[1], node[2], node[3] = "le", e2, e1
   end
 
   return node
