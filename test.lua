@@ -1,15 +1,6 @@
 #!/usr/bin/env lua
 
-local metalua = false
-
-if arg[1] == "metalua" then metalua = true end
-
-local parser
-if metalua then
-  parser = require "metalua.compiler".new()
-else
-  parser = require "lua-parser.parser"
-end
+local parser = require "lua-parser.parser"
 local pp = require "lua-parser.pp"
 
 -- expected result, result, subject
@@ -18,12 +9,7 @@ local e, r, s
 local filename = "test.lua"
 
 local function parse (s)
-  local t,m
-  if metalua then
-    t = parser:src_to_ast(s)
-  else
-    t,m = parser.parse(s,filename)
-  end
+  local t,m = parser.parse(s,filename)
   local r
   if not t then
     r = m
@@ -352,8 +338,6 @@ assert(r == e)
 
 -- syntax error
 
-if not metalua then
-
 -- floating points
 
 s = [=[
@@ -479,8 +463,6 @@ test.lua:4:1: syntax error, unclosed long string
 
 r = parse(s)
 assert(r == e)
-
-end
 
 print("> testing parser...")
 
@@ -670,7 +652,7 @@ repeat
 until 1
 ]=]
 e = [=[
-{ `Repeat{ { `If{ `Op{ "lt", `Number "1", `Number "2" }, { `Break } } }, `Number "1" } }
+{ `Repeat{ { `If{ `Op{ "gt", `Number "2", `Number "1" }, { `Break } } }, `Number "1" } }
 ]=]
 
 r = parse(s)
@@ -721,16 +703,12 @@ assert(r == e)
 
 -- empty files
 
-if not metalua then
-
 s = [=[
 ;
 ]=]
 e = [=[
 {  }
 ]=]
-
-end
 
 r = parse(s)
 assert(r == e)
@@ -823,8 +801,6 @@ assert(r == e)
 
 -- goto
 
-if not metalua then
-
 s = [=[
 goto label
 :: label :: return
@@ -913,8 +889,6 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
-end
-
 -- if-else
 
 s = [=[
@@ -969,8 +943,6 @@ e = [=[
 r = parse(s)
 assert(r == e)
 
-if not metalua then
-
 s = [=[
 if a then return a
 elseif b then return
@@ -983,8 +955,6 @@ e = [=[
 
 r = parse(s)
 assert(r == e)
-
-end
 
 s = [=[
 if a then
@@ -1000,8 +970,6 @@ r = parse(s)
 assert(r == e)
 
 -- labels
-
-if not metalua then
 
 s = [=[
 ::label::
@@ -1026,8 +994,6 @@ e = [=[
 
 r = parse(s)
 assert(r == e)
-
-end
 
 -- locals
 
@@ -1107,7 +1073,7 @@ s = [=[
 relational = 1 < 2 >= 3 == 4 ~= 5 < 6 <= 7
 ]=]
 e = [=[
-{ `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "not", `Op{ "eq", `Op{ "eq", `Op{ "le", `Number "3", `Op{ "lt", `Number "1", `Number "2" } }, `Number "4" }, `Number "5" } }, `Number "6" }, `Number "7" } } } }
+{ `Set{ { `Id "relational" }, { `Op{ "le", `Op{ "lt", `Op{ "ne", `Op{ "eq", `Op{ "ge", `Op{ "lt", `Number "1", `Number "2" }, `Number "3" }, `Number "4" }, `Number "5" }, `Number "6" }, `Number "7" } } } }
 ]=]
 
 r = parse(s)
@@ -1356,8 +1322,6 @@ r = parse(s)
 assert(r == e)
 
 -- syntax error
-
-if not metalua then
 
 -- anonymous functions
 
@@ -1859,10 +1823,6 @@ test.lua:3:3: syntax error, expected 'do' after the condition
 
 r = parse(s)
 assert(r == e)
-
-end
-
-if not metalua then
 
 print("> testing more syntax errors...")
 
@@ -3770,6 +3730,29 @@ test.lua:6:1: syntax error, unclosed long string
 r = parse(s)
 assert(r == e)
 
+print("> testing issues...")
+
+-- issue #12
+s = [===[
+gl_f_ct = 0
+
+function f()
+    if gl_f_ct <= 0 then
+        gl_f_ct=1
+        return 1000
+    end
+    return -1000
 end
+
+print( f("1st call") > f("2nd call") )
+gl_f_ct = 0
+print( f("1st call") < f("2nd call") )
+]===]
+e = [=[
+{ `Set{ { `Id "gl_f_ct" }, { `Number "0" } }, `Set{ { `Id "f" }, { `Function{ {  }, { `If{ `Op{ "le", `Id "gl_f_ct", `Number "0" }, { `Set{ { `Id "gl_f_ct" }, { `Number "1" } }, `Return{ `Number "1000" } } }, `Return{ `Op{ "unm", `Number "1000" } } } } } }, `Call{ `Id "print", `Op{ "gt", `Call{ `Id "f", `String "1st call" }, `Call{ `Id "f", `String "2nd call" } } }, `Set{ { `Id "gl_f_ct" }, { `Number "0" } }, `Call{ `Id "print", `Op{ "lt", `Call{ `Id "f", `String "1st call" }, `Call{ `Id "f", `String "2nd call" } } } }
+]=]
+
+r = parse(s)
+assert(r == e)
 
 print("OK")

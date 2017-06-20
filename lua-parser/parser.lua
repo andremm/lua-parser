@@ -41,12 +41,12 @@ apply:
 
 lhs: `Id{ <string> } | `Index{ expr expr }
 
-opid:  -- includes additional operators from Lua 5.3
+opid:  -- includes additional operators from Lua 5.3 and all relational operators
     'add'  | 'sub' | 'mul'  | 'div'
   | 'idiv' | 'mod' | 'pow'  | 'concat'
   | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
-  | 'eq'   | 'lt'  | 'le'   | 'and' | 'or'
-  | 'unm'  | 'len' | 'bnot' | 'not'
+  | 'eq'   | 'ne'  | 'lt'   | 'gt'  | 'le'   | 'ge'
+  | 'and'  | 'or'  | 'unm'  | 'len' | 'bnot' | 'not'
 ]]
 
 local lpeg = require "lpeglabel"
@@ -197,20 +197,9 @@ end
 local function binaryOp (e1, op, e2)
   if not op then
     return e1
+  else
+    return { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
   end
-
-  local node = { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
-
-  if op == "ne" then
-    node[1] = "eq"
-    node = unaryOp("not", node)
-  elseif op == "gt" then
-    node[1], node[2], node[3] = "lt", e2, e1
-  elseif op == "ge" then
-    node[1], node[2], node[3] = "le", e2, e1
-  end
-
-  return node
 end
 
 local function sepBy (patt, sep, label)
