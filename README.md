@@ -84,7 +84,7 @@ AST format
 
 	lhs: `Id{ <string> } | `Index{ expr expr }
 
-        opid:  -- includes additional operators from Lua 5.3 and all relational operators
+	opid:  -- includes additional operators from Lua 5.3 and all relational operators
             'add'  | 'sub' | 'mul'  | 'div'
           | 'idiv' | 'mod' | 'pow'  | 'concat'
           | 'band' | 'bor' | 'bxor' | 'shl' | 'shr'
