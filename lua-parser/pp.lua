@@ -154,7 +154,7 @@ function exp2str (exp)
       end
     end
     str = str .. " }"
-  elseif tag == "Invoke" then -- `Invoke{ expr `String{ <string> expr* }
+  elseif tag == "Invoke" then -- `Invoke{ expr `String{ <string> } expr* }
     str = str .. "{ "
     str = str .. exp2str(exp[1]) .. ", "
     str = str .. exp2str(exp[2])
