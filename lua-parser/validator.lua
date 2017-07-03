@@ -310,7 +310,7 @@ function traverse_exp (env, exp)
     return traverse_paren(env, exp)
   elseif tag == "Call" then -- `Call{ expr expr* }
     return traverse_call(env, exp)
-  elseif tag == "Invoke" then -- `Invoke{ expr `String{ <string> expr* }
+  elseif tag == "Invoke" then -- `Invoke{ expr `String{ <string> } expr* }
     return traverse_invoke(env, exp)
   elseif tag == "Id" or -- `Id{ <string> }
          tag == "Index" then -- `Index{ expr expr }
