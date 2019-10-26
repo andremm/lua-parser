@@ -10,7 +10,7 @@ Requirements
 ------------
 
         lua >= 5.1
-        lpeglabel >= 1.0.0
+        lpeglabel >= 1.6.0
 
 API
 ---
