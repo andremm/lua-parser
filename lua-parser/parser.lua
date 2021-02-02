@@ -186,19 +186,23 @@ local function kw (str)
   return token(P(str) * -V"IdRest")
 end
 
+local function dec(n)
+  return n - 1
+end
+
 local function tagC (tag, patt)
-  return Ct(Cg(Cp(), "pos") * Cg(Cc(tag), "tag") * patt)
+  return Ct(Cg(Cp(), "pos") * Cg(Cc(tag), "tag") * patt * Cg(Cp() / dec, "to"))
 end
 
 local function unaryOp (op, e)
-  return { tag = "Op", pos = e.pos, [1] = op, [2] = e }
+  return { tag = "Op", pos = e.pos, to = e.to, [1] = op, [2] = e }
 end
 
 local function binaryOp (e1, op, e2)
   if not op then
     return e1
   else
-    return { tag = "Op", pos = e1.pos, [1] = op, [2] = e1, [3] = e2 }
+    return { tag = "Op", pos = e1.pos, to = e2.to, [1] = op, [2] = e1, [3] = e2 }
   end
 end
 
@@ -236,25 +240,25 @@ local function addDots (params, dots)
 end
 
 local function insertIndex (t, index)
-  return { tag = "Index", pos = t.pos, [1] = t, [2] = index }
+  return { tag = "Index", pos = t.pos, to = index.to, [1] = t, [2] = index }
 end
 
 local function markMethod(t, method)
   if method then
-    return { tag = "Index", pos = t.pos, is_method = true, [1] = t, [2] = method }
+    return { tag = "Index", pos = t.pos, to = method.to, is_method = true, [1] = t, [2] = method }
   end
   return t
 end
 
 local function makeIndexOrCall (t1, t2)
   if t2.tag == "Call" or t2.tag == "Invoke" then
-    local t = { tag = t2.tag, pos = t1.pos, [1] = t1 }
+    local t = { tag = t2.tag, pos = t1.pos, to = t2.to, [1] = t1 }
     for k, v in ipairs(t2) do
       table.insert(t, v)
     end
     return t
   end
-  return { tag = "Index", pos = t1.pos, [1] = t1, [2] = t2[1] }
+  return { tag = "Index", pos = t1.pos, to = t2.to, [1] = t1, [2] = t2[1] }
 end
 
 -- grammar
