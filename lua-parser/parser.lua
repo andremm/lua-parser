@@ -50,6 +50,7 @@ opid:  -- includes additional operators from Lua 5.3 and all relational operator
 ]]
 
 local lpeg = require "lpeglabel"
+local re = require "relabel"
 
 lpeg.locale(lpeg)
 
@@ -456,7 +457,7 @@ local G = { V"Lua",
   PowOp     = sym("^")   / "pow";
 }
 
-local parser = {}
+local parser = { detailed_errors = false }
 
 local validator = require("lua-parser.validator")
 local validate = validator.validate
@@ -467,8 +468,19 @@ function parser.parse (subject, filename)
   lpeg.setmaxstack(1000)
   local ast, label, errorpos = lpeg.match(G, subject, nil, errorinfo)
   if not ast then
-    local errmsg = labels[label][2]
-    return ast, syntaxerror(errorinfo, errorpos, errmsg)
+    if parser.detailed_errors then
+      local line, col = re.calcline(subject, errorpos)
+      return ast, {
+        line = line;
+        column = col;
+        id = labels[label][1];
+        message = labels[label][2];
+        position = errorpos;
+      }
+    else
+      local errmsg = labels[label][2]
+      return ast, syntaxerror(errorinfo, errorpos, errmsg)
+    end
   end
   return validate(ast, errorinfo)
 end
