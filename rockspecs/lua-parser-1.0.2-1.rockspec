@@ -1,9 +1,9 @@
 --*-lua-*--
 package = "lua-parser"
-version = "1.0.1-1"
+version = "1.0.2-1"
 source = {
   url = "git://github.com/andremm/lua-parser",
-  tag = "v1.0.1",
+  tag = "v1.0.2",
 }
 description = {
   summary = "A Lua 5.3 parser written with LPegLabel",
