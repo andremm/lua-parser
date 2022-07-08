@@ -58,7 +58,7 @@ local utf8_char = (utf8 or {
 			local a = results[i]
 
 			if type(a) ~= "number" then
-				a = tonumber(a) or error("bad argument #" .. i .. " to 'char' (number expected, got " .. typeof(a) .. ")", 2)
+				a = tonumber(a) or error("bad argument #" .. i .. " to 'char' (number expected, got " .. type(a) .. ")", 2)
 			end
 
 			if not (0 <= a) or a > 1114111 or a % 1 ~= 0 then
