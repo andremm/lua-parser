@@ -3752,6 +3752,28 @@ e = [=[
 { `Set{ { `Id "gl_f_ct" }, { `Number "0" } }, `Set{ { `Id "f" }, { `Function{ {  }, { `If{ `Op{ "le", `Id "gl_f_ct", `Number "0" }, { `Set{ { `Id "gl_f_ct" }, { `Number "1" } }, `Return{ `Number "1000" } } }, `Return{ `Op{ "unm", `Number "1000" } } } } } }, `Call{ `Id "print", `Op{ "gt", `Call{ `Id "f", `String "1st call" }, `Call{ `Id "f", `String "2nd call" } } }, `Set{ { `Id "gl_f_ct" }, { `Number "0" } }, `Call{ `Id "print", `Op{ "lt", `Call{ `Id "f", `String "1st call" }, `Call{ `Id "f", `String "2nd call" } } } }
 ]=]
 
+-- table indentation
+
+s = [===[
+return {{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}
+]===]
+e = [=[
+{ `Return{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table } } } } } } } } } } } } } } } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
+s = [===[
+return {{{{{{{{{{{{{{{{{}}}}}}}}}}}}}}}}}
+]===]
+e = [=[
+{ `Return{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table{ `Table } } } } } } } } } } } } } } } } } }
+]=]
+
+r = parse(s)
+assert(r == e)
+
 r = parse(s)
 assert(r == e)
 

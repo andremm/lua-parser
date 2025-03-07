@@ -214,8 +214,12 @@ local function sepBy (patt, sep, label)
   end
 end
 
+local function cut(s, idx, match)
+  return idx, match
+end
+
 local function chainOp (patt, sep, label)
-  return Cf(sepBy(patt, sep, label), binaryOp)
+  return Cmt(Cf(sepBy(patt, sep, label), binaryOp), cut)
 end
 
 local function commaSep (patt, label)
