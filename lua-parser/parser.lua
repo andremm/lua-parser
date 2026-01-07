@@ -49,6 +49,48 @@ opid:  -- includes additional operators from Lua 5.3 and all relational operator
   | 'and'  | 'or'  | 'unm'  | 'len' | 'bnot' | 'not'
 ]]
 
+local utf8_char = (utf8 or {
+	char = function(...)
+		local results = { ... }
+		local n = select("#", ...)
+
+		for i = 1, n do
+			local a = results[i]
+
+			if type(a) ~= "number" then
+				a = tonumber(a) or error("bad argument #" .. i .. " to 'char' (number expected, got " .. type(a) .. ")", 2)
+			end
+
+			if not (0 <= a) or a > 1114111 or a % 1 ~= 0 then
+				error("bad argument #" .. i .. " to 'char' (expected an integer in the range [0, 1114111], got " .. a .. ")", 2)
+			end
+
+			if a >= 128 then
+				local _1 = a % 64
+				local b = (a - _1) / 64
+
+				if a >= 2048 then
+					local _64 = b % 64
+					local c = (b - _64) / 64
+
+					if a >= 65536 then
+						local _4096 = c % 64
+						local d = (c - _4096) / 64
+						results[i] = string.char(d + 240, _4096 + 128, _64 + 128, _1 + 128)
+					else
+						results[i] = string.char(c + 224, _64 + 128, _1 + 128)
+					end
+				else
+					results[i] = string.char(b + 192, _1 + 128)
+				end
+			else
+				results[i] = string.char(a)
+			end
+		end
+		return table.concat(results, nil, 1, n)
+	end
+}).char
+
 local lpeg = require "lpeglabel"
 
 lpeg.locale(lpeg)
@@ -420,10 +462,7 @@ local G = { V"Lua",
                   * expect(C(xdigit^1), "DigitUEsc") * Cc(16)
                   * expect("}", "CBraceUEsc")
                   / tonumber 
-                  / (utf8 and utf8.char or string.char)  -- true max is \u{10FFFF}
-                                                         -- utf8.char needs Lua 5.3
-                                                         -- string.char works only until \u{FF}
-
+                  / utf8_char
            + throw("EscSeq")
            );
 
