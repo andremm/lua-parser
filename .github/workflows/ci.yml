@@ -41,9 +41,9 @@ jobs:
           luarocks install luacov-coveralls
 
       - name: Upload coverage status
+        # Lua 5.5 report depends on https://github.com/lunarmodules/luacov/pull/118
+        if: ${{ matrix.lua-version != '5.5' }}
         run: |
-          # Lua 5.5 report depends on https://github.com/lunarmodules/luacov/pull/118
-          if: ${{ matrix.lua-version != '5.5' }}
           export MY_PYTHON_VER=$(python -c 'import sys; print(".".join(sys.version.split(".")[0:2]))')
           export PATH="/Users/runner/Library/Python/$MY_PYTHON_VER/bin:$PATH"
           coveralls -b . -i src --dump c.report.json
