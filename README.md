@@ -1,7 +1,7 @@
 lua-parser
 ==========
 [![Build Status](https://github.com/andremm/lua-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/andremm/lua-parser/actions)
-[![Coverage Status](https://coveralls.io/repos/andremm/lua-parser/badge.png)](https://coveralls.io/r/andremm/lua-parser)
+[![Coverage Status](https://coveralls.io/repos/github/andremm/lua-parser/badge.svg)](https://coveralls.io/github/andremm/lua-parser)
 [![License](http://img.shields.io/badge/Licence-MIT-brightgreen.svg)](LICENSE)
 
 This is a Lua 5.3 parser written with [LPegLabel](https://github.com/sqmedeiros/lpeglabel) that
