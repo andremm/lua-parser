@@ -1824,7 +1824,7 @@ test.lua:3:3: syntax error, expected 'do' after the condition
 r = parse(s)
 assert(r == e)
 
-print("> testing more syntax errors...")
+print("> testing labels...")
 
 -- ErrExtra
 s = [=[

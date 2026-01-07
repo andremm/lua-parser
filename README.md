@@ -1,6 +1,8 @@
 lua-parser
 ==========
-[![Build Status](https://travis-ci.org/andremm/lua-parser.svg?branch=master)](https://travis-ci.org/andremm/lua-parser)
+[![Build Status](https://github.com/andremm/lua-parser/actions/workflows/ci.yml/badge.svg)](https://github.com/andremm/lua-parser/actions)
+[![Coverage Status](https://coveralls.io/repos/andremm/lua-parser/badge.png)](https://coveralls.io/r/andremm/lua-parser)
+[![License](http://img.shields.io/badge/Licence-MIT-brightgreen.svg)](LICENSE)
 
 This is a Lua 5.3 parser written with [LPegLabel](https://github.com/sqmedeiros/lpeglabel) that
 generates an AST in a format that is similar to the one specified by [Metalua](https://github.com/fab13n/metalua-parser).
