@@ -1,3 +1,5 @@
+dofile("test-pp.lua")
+
 #!/usr/bin/env lua
 
 local parser = require "lua-parser.parser"

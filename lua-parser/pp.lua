@@ -18,7 +18,7 @@ end
 local function fixed_string (str)
   local new_str = ""
   for i=1,string.len(str) do
-    char = string.byte(str, i)
+    local char = string.byte(str, i)
     if char == 34 then new_str = new_str .. string.format("\\\"")
     elseif char == 92 then new_str = new_str .. string.format("\\\\")
     elseif char == 7 then new_str = new_str .. string.format("\\a")
