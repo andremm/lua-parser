@@ -3777,4 +3777,7 @@ assert(r == e)
 r = parse(s)
 assert(r == e)
 
+print("> testing pretty printer...")
+dofile("test-pp.lua")
+
 print("OK")
